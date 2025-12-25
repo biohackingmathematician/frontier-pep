@@ -1,0 +1,176 @@
+# Knowledge Graph Ontology Schema
+# Peptide Atlas - Entity and Relationship Definitions
+
+# DISCLAIMER: This schema is for research purposes only.
+
+version: "1.0.0"
+
+# Node type definitions
+node_types:
+  peptide:
+    description: "A peptide compound in the atlas"
+    required_attributes:
+      - canonical_name
+      - peptide_class
+      - evidence_tier  # ALWAYS REQUIRED
+    optional_attributes:
+      - synonyms
+      - subclass
+      - sequence
+      - molecular_weight_da
+      - regulatory_status
+      - administration_routes
+      - description
+      - pubchem_cid
+      - drugbank_id
+      - uniprot_id
+    prohibited_attributes:
+      - dose  # NEVER include
+      - dosage
+      - protocol
+      - cycle
+      - frequency
+      - duration
+      - timing
+      
+  target:
+    description: "A molecular target (receptor, enzyme, tissue, etc.)"
+    required_attributes:
+      - name
+      - target_type
+    optional_attributes:
+      - gene_symbol
+      - uniprot_id
+      - cell_types
+      - tissues
+      - description
+      
+  pathway:
+    description: "A biological signaling pathway"
+    required_attributes:
+      - name
+      - category
+    optional_attributes:
+      - reactome_id
+      - kegg_id
+      - key_components
+      - description
+      
+  effect_domain:
+    description: "An effect or outcome domain"
+    required_attributes:
+      - name
+      - category
+    optional_attributes:
+      - description
+      - measurement_proxies
+      
+  risk:
+    description: "An adverse effect or risk"
+    required_attributes:
+      - name
+      - category
+    optional_attributes:
+      - severity_typical
+      - reversibility
+      - description
+      - mechanism_if_known
+      
+  evidence_source:
+    description: "A source of evidence (study, database, etc.)"
+    required_attributes:
+      - source_type
+    optional_attributes:
+      - pubmed_id
+      - doi
+      - nct_id
+      - title
+      - year
+      - population
+      - sample_size
+      - quality_notes
+
+# Edge type definitions
+edge_types:
+  binds:
+    description: "Peptide binds to a molecular target"
+    source_type: peptide
+    target_type: target
+    attributes:
+      - binding_type
+      - affinity_value
+      - affinity_unit
+      - confidence
+      
+  modulates:
+    description: "Peptide modulates a pathway"
+    source_type: peptide
+    target_type: pathway
+    attributes:
+      - direction  # activates, inhibits, modulates
+      - magnitude
+      - confidence
+      
+  associated_with_effect:
+    description: "Peptide is associated with an effect"
+    source_type: peptide
+    target_type: effect_domain
+    required_attributes:
+      - evidence_tier  # ALWAYS REQUIRED
+    optional_attributes:
+      - direction
+      - effect_size
+      - timescale
+      - confidence
+      - notes
+      
+  associated_with_risk:
+    description: "Peptide is associated with a risk"
+    source_type: peptide
+    target_type: risk
+    required_attributes:
+      - evidence_tier  # ALWAYS REQUIRED
+    optional_attributes:
+      - frequency
+      - dose_dependent
+      - confidence
+      - notes
+      
+  pathway_involved_in:
+    description: "Pathway is involved in an effect"
+    source_type: pathway
+    target_type: effect_domain
+    attributes:
+      - mechanism_notes
+      
+  risk_linked_to:
+    description: "Risk is mechanistically linked to a target or pathway"
+    source_type: risk
+    target_types:
+      - target
+      - pathway
+    attributes:
+      - mechanism_hypothesis
+
+# Validation rules
+validation_rules:
+  - name: "evidence_tier_required"
+    description: "All peptide-effect and peptide-risk edges must have evidence tier"
+    applies_to:
+      - associated_with_effect
+      - associated_with_risk
+    rule: "evidence_tier is not null"
+    
+  - name: "no_dosing_information"
+    description: "No node or edge may contain dosing information"
+    applies_to: all
+    prohibited_patterns:
+      - "\\d+\\s*(mg|mcg|ug|μg|iu|IU|units?)"
+      - "\\d+x\\s*(?:per|/)\\s*(?:day|week|month)"
+      - "(?:cycle|protocol|stack)"
+    
+  - name: "canonical_name_unique"
+    description: "Peptide canonical names must be unique"
+    applies_to: peptide
+    rule: "unique(canonical_name)"
+

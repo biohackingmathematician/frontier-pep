@@ -1,0 +1,165 @@
+# Visualization Configuration
+# Peptide Atlas - Visual Style and Output Settings
+
+# DISCLAIMER: Visualizations are for research purposes only.
+# No therapeutic recommendations are implied.
+
+# Global visualization settings
+global:
+  theme: "dark"  # dark or light
+  font_family: "Inter, system-ui, sans-serif"
+  background_color: "#0a0a0f"
+  text_color: "#e0e0e0"
+  
+# Color palettes
+colors:
+  # Peptide class colors
+  peptide_class:
+    ghrh_analog: "#1f77b4"
+    ghs_ghrelin_mimetic: "#2ca02c"
+    igf_axis: "#ff7f0e"
+    regenerative_repair: "#d62728"
+    thymic_immune: "#9467bd"
+    metabolic_incretin: "#8c564b"
+    cns_neurotrophic: "#e377c2"
+    longevity_cellular: "#17becf"
+    glp1_reference: "#7f7f7f"
+    other: "#bcbd22"
+    
+  # Evidence tier colors (green = higher quality, red = lower)
+  evidence_tier:
+    tier_1_approved: "#1a9850"
+    tier_2_late_clinical: "#66bd63"
+    tier_3_early_clinical: "#a6d96a"
+    tier_4_preclinical: "#fee08b"
+    tier_5_mechanistic: "#fdae61"
+    tier_6_anecdotal: "#f46d43"
+    tier_unknown: "#d73027"
+    
+  # Effect domain colors
+  effect_domain:
+    anabolic_body_composition: "#1f77b4"
+    regeneration_repair: "#2ca02c"
+    immune_resilience: "#9467bd"
+    metabolic_glycemic: "#ff7f0e"
+    metabolic_lipid: "#ffbb78"
+    cns_cognitive: "#e377c2"
+    cns_mood: "#f7b6d2"
+    cns_neuroprotection: "#c5b0d5"
+    longevity_aging: "#17becf"
+    performance_endurance: "#7f7f7f"
+    performance_strength: "#bcbd22"
+    recovery: "#98df8a"
+    sleep: "#aec7e8"
+    skin_hair: "#c49c94"
+    sexual_function: "#f7b6d2"
+    other: "#d3d3d3"
+    
+  # Risk severity colors
+  risk_severity:
+    mild: "#a6d96a"
+    moderate: "#fee08b"
+    severe: "#f46d43"
+    potentially_fatal: "#d73027"
+    unknown: "#7f7f7f"
+
+# World map visualization
+world_map:
+  # Layout algorithm
+  layout:
+    algorithm: "umap"
+    n_neighbors: 15
+    min_dist: 0.2
+    spread: 1.5
+    
+  # Node styling
+  nodes:
+    size_range: [8, 40]
+    size_encoding: "degree"  # degree, evidence_tier, or constant
+    opacity: 0.85
+    border_width: 1.5
+    border_color: "#ffffff"
+    
+  # Edge styling
+  edges:
+    show: true
+    opacity: 0.15
+    width_range: [0.5, 2.0]
+    width_encoding: "confidence"
+    
+  # Labels
+  labels:
+    show: true
+    font_size: 10
+    max_labels: 50  # Show top N by degree
+    
+  # Interactivity
+  interactivity:
+    hover_info: true
+    click_select: true
+    zoom: true
+    pan: true
+    
+  # Legend
+  legend:
+    show: true
+    position: "right"
+    
+  # Disclaimer overlay
+  disclaimer:
+    show: true
+    position: "top"
+    text: "RESEARCH USE ONLY - Not medical advice"
+    
+# Mapper graph visualization
+mapper_graph:
+  # Node styling
+  nodes:
+    size_encoding: "member_count"
+    color_encoding: "dominant_class"
+    size_range: [15, 60]
+    
+  # Edge styling
+  edges:
+    width_encoding: "intersection_size"
+    width_range: [1, 5]
+    
+  # Layout
+  layout:
+    algorithm: "force_directed"
+    iterations: 500
+    
+# Persistence diagram
+persistence_diagram:
+  # Plot styling
+  style:
+    marker_size: 8
+    diagonal_color: "#7f7f7f"
+    h0_color: "#1f77b4"
+    h1_color: "#ff7f0e"
+    h2_color: "#2ca02c"
+    
+  # Axes
+  axes:
+    equal_aspect: true
+    grid: true
+    
+# Export settings
+export:
+  # HTML export
+  html:
+    include_plotly_js: "cdn"
+    full_html: true
+    
+  # Image export
+  image:
+    format: "png"
+    scale: 2
+    width: 1200
+    height: 800
+    
+  # Data export
+  data:
+    include_embeddings: true
+    include_clusters: true
+

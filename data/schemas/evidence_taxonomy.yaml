@@ -1,0 +1,151 @@
+# Evidence Taxonomy
+# Peptide Atlas - Evidence Quality Classification System
+
+# DISCLAIMER: This taxonomy is for research classification only.
+# Higher evidence tiers do NOT constitute recommendations for use.
+
+version: "1.0.0"
+
+# Evidence tier definitions
+tiers:
+  tier_1_approved:
+    name: "Regulatory Approval"
+    description: "Approved by major regulatory body (FDA, EMA, etc.) for at least one indication"
+    criteria:
+      - "Has received regulatory approval"
+      - "Safety and efficacy established through rigorous review"
+      - "Post-marketing surveillance data available"
+    confidence_score: 1.0
+    interpretation: |
+      Highest quality evidence. The compound has passed regulatory review for specific 
+      indications. Note: approval for one indication does NOT imply safety or efficacy 
+      for other uses.
+    examples:
+      - "Semaglutide (Ozempic) - approved for type 2 diabetes"
+      - "Tesamorelin (Egrifta) - approved for HIV lipodystrophy"
+      
+  tier_2_late_clinical:
+    name: "Late-Stage Clinical Trials"
+    description: "Phase II/III randomized controlled trial data available"
+    criteria:
+      - "Completed Phase II or Phase III RCT"
+      - "Published in peer-reviewed journal"
+      - "Adequate sample size and methodology"
+    confidence_score: 0.85
+    interpretation: |
+      Strong human evidence but not yet approved. Results should be interpreted with 
+      caution as regulatory approval requires additional scrutiny.
+    examples:
+      - "MK-677 - Phase II data for various indications"
+      - "SS-31 (Elamipretide) - Phase II/III for mitochondrial diseases"
+      
+  tier_3_early_clinical:
+    name: "Early Clinical Trials"
+    description: "Phase I or early Phase II human data"
+    criteria:
+      - "Completed Phase I or early Phase II study"
+      - "Safety data in humans available"
+      - "Efficacy signals may be preliminary"
+    confidence_score: 0.65
+    interpretation: |
+      Preliminary human data. Safety profile is being established. Efficacy claims 
+      should be considered tentative.
+    examples:
+      - "Ipamorelin - early clinical studies"
+      - "Thymosin beta-4 - early clinical trials"
+      
+  tier_4_preclinical:
+    name: "Preclinical Only"
+    description: "Animal studies or in vivo preclinical data only"
+    criteria:
+      - "Published preclinical studies"
+      - "Animal model data available"
+      - "No controlled human data"
+    confidence_score: 0.45
+    interpretation: |
+      Limited evidence. Animal studies may not translate to humans. Safety and 
+      efficacy in humans is UNKNOWN. Use in humans carries significant risk.
+    examples:
+      - "BPC-157 - extensive preclinical but limited human data"
+      - "FOXO4-DRI - preclinical senolytic studies"
+      
+  tier_5_mechanistic:
+    name: "Mechanistic Only"
+    description: "In vitro studies or theoretical mechanism only"
+    criteria:
+      - "Cell culture or biochemical studies"
+      - "Theoretical mechanism proposed"
+      - "No in vivo validation"
+    confidence_score: 0.25
+    interpretation: |
+      Very limited evidence. Biological plausibility without direct validation. 
+      Translation to living organisms is highly uncertain.
+    examples:
+      - "Novel synthetic peptides with receptor binding data"
+      - "Computationally designed peptides"
+      
+  tier_6_anecdotal:
+    name: "Anecdotal"
+    description: "Case reports, uncontrolled observations, user reports"
+    criteria:
+      - "Case reports or series"
+      - "Uncontrolled observations"
+      - "Community/user reports"
+    confidence_score: 0.15
+    interpretation: |
+      Lowest quality evidence. Subject to significant bias, placebo effects, and 
+      reporting errors. Should NOT be used to infer efficacy or safety.
+    examples:
+      - "Online user experience reports"
+      - "Single case studies without controls"
+      
+  tier_unknown:
+    name: "Unknown"
+    description: "Insufficient data to classify"
+    criteria:
+      - "No published studies found"
+      - "Conflicting or unreliable sources"
+      - "Novel compound with minimal characterization"
+    confidence_score: 0.05
+    interpretation: |
+      Evidence quality cannot be determined. Treat with extreme caution. 
+      Unknown compounds may carry unpredictable risks.
+
+# Confidence scoring
+confidence_aggregation:
+  description: "How to aggregate confidence across multiple sources"
+  methods:
+    maximum:
+      description: "Use highest quality evidence available"
+      use_when: "Any high-quality source exists"
+    weighted_average:
+      description: "Weight by number of sources at each tier"
+      use_when: "Multiple sources with varying quality"
+    minimum:
+      description: "Use lowest quality to be conservative"
+      use_when: "Conflicting evidence exists"
+
+# Display guidelines
+display:
+  always_show_tier: true
+  color_coding:
+    tier_1_approved: "#1a9850"  # Dark green
+    tier_2_late_clinical: "#66bd63"  # Green
+    tier_3_early_clinical: "#a6d96a"  # Light green
+    tier_4_preclinical: "#fee08b"  # Yellow
+    tier_5_mechanistic: "#fdae61"  # Orange
+    tier_6_anecdotal: "#f46d43"  # Red-orange
+    tier_unknown: "#d73027"  # Red
+  warnings:
+    tier_4_preclinical: "CAUTION: Preclinical only - human effects unknown"
+    tier_5_mechanistic: "CAUTION: Theoretical - no in vivo validation"
+    tier_6_anecdotal: "CAUTION: Anecdotal - high bias risk"
+    tier_unknown: "CAUTION: Unknown evidence - extreme caution"
+
+# Prohibited claims
+prohibited:
+  - "Claiming efficacy without evidence tier qualification"
+  - "Implying safety without risk acknowledgment"
+  - "Suggesting therapeutic use"
+  - "Providing dosing or protocol recommendations"
+

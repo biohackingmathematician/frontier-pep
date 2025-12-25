@@ -1,0 +1,133 @@
+# GNN Model Configuration
+# Peptide Atlas - Graph Neural Network Hyperparameters
+
+# DISCLAIMER: This configuration is for research purposes only.
+# No therapeutic recommendations are made by this model.
+
+model:
+  # Architecture
+  architecture: "heterogeneous_rgat"
+  
+  # Embedding dimensions
+  hidden_dim: 128
+  embedding_dim: 64
+  
+  # GNN layers
+  num_layers: 3
+  num_heads: 4  # For attention mechanisms
+  
+  # Dropout
+  dropout: 0.2
+  attention_dropout: 0.1
+  
+  # Activation
+  activation: "elu"
+  
+  # Normalization
+  layer_norm: true
+  batch_norm: false
+
+hyperbolic:
+  # Poincaré ball configuration
+  curvature: 1.0
+  embedding_dim: 32
+  
+  # Projection
+  projection_method: "exponential_map"
+  clip_radius: 0.99  # Numerical stability
+
+training:
+  # Optimization
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  optimizer: "adam"
+  
+  # Learning rate schedule
+  scheduler: "cosine"
+  warmup_epochs: 5
+  
+  # Training parameters
+  epochs: 100
+  batch_size: 32
+  patience: 15  # Early stopping
+  
+  # Self-supervised pretraining
+  pretraining:
+    enabled: true
+    tasks:
+      - "edge_prediction"
+      - "node_attribute_prediction"
+      - "masked_node_prediction"
+    
+    loss_weights:
+      edge_prediction: 1.0
+      node_attribute_prediction: 0.5
+      masked_node_prediction: 0.5
+    
+    mask_ratio: 0.15
+    negative_sampling_ratio: 5
+
+  # Device
+  device: "auto"  # auto, cpu, cuda, mps
+  
+  # Reproducibility
+  seed: 42
+
+# Node type configurations
+node_types:
+  peptide:
+    initial_dim: 32
+    features:
+      - "peptide_class"
+      - "evidence_tier"
+      - "regulatory_status"
+  
+  target:
+    initial_dim: 16
+    features:
+      - "target_type"
+  
+  pathway:
+    initial_dim: 16
+    features:
+      - "category"
+  
+  effect_domain:
+    initial_dim: 16
+    features:
+      - "category"
+  
+  risk:
+    initial_dim: 16
+    features:
+      - "category"
+      - "severity"
+
+# Edge type configurations
+edge_types:
+  binds:
+    features:
+      - "binding_type"
+      - "confidence"
+  
+  modulates:
+    features:
+      - "direction"
+      - "magnitude"
+  
+  associated_with_effect:
+    features:
+      - "direction"
+      - "evidence_tier"
+  
+  associated_with_risk:
+    features:
+      - "evidence_tier"
+      - "confidence"
+
+# Checkpointing
+checkpointing:
+  save_dir: "outputs/checkpoints"
+  save_best: true
+  save_frequency: 10  # epochs
+
