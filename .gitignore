@@ -154,7 +154,10 @@ data/raw/*
 !data/raw/README.md
 data/processed/*
 !data/processed/.gitkeep
-outputs/
+
+# Outputs (ignore generated files except figures for paper)
+outputs/*
+!outputs/figures/
 *.pt
 *.pth
 *.ckpt
