@@ -11,6 +11,8 @@ from peptide_atlas.models.gnn import (
     RelationalGATLayer,
     HeterogeneousGNNEncoder,
     GNNConfig,
+    TrainingConfig,
+    PretrainingConfig,
 )
 from peptide_atlas.models.hyperbolic import (
     PoincareEmbedding,
@@ -25,6 +27,8 @@ __all__ = [
     "RelationalGATLayer",
     "HeterogeneousGNNEncoder",
     "GNNConfig",
+    "TrainingConfig",
+    "PretrainingConfig",
     # Hyperbolic
     "PoincareEmbedding",
     "HyperbolicMLR",
