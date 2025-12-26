@@ -1,147 +1,247 @@
 # The Frontier Peptide Atlas
 
-> Graph Foundations and Topological Data Analysis for Mapping Under-Characterized Regenerative, Immune, and Anabolic Mechanism Space
+> A Foundational Knowledge Resource for Under-Characterized Peptide Mechanisms
 
 **Author:** Agna Chan  
-**Date:** December 2025  
+**Version:** 0.1.0  
 **Repository:** [github.com/biohackingmathematician/frontier-pep](https://github.com/biohackingmathematician/frontier-pep)
 
 ---
 
 ## CRITICAL DISCLAIMER
 
-**This Peptide Atlas is for RESEARCH AND EDUCATIONAL PURPOSES ONLY.**
+**This resource is for RESEARCH AND EDUCATIONAL PURPOSES ONLY.**
 
 - It does **NOT** constitute medical advice, treatment guidance, or clinical recommendations.
-- The inclusion of any peptide does **NOT** imply it is safe, effective, legal, or appropriate for any individual.
-- Many peptides mapped here are **experimental, off-label, inadequately studied, or not approved** for human use. They may carry **serious, unknown, or life-threatening risks**.
-- We provide **NO dosing information, NO protocol design, NO usage recommendations**.
-- Any decision to use such compounds must be made **with a qualified healthcare professional** and must comply with all applicable laws and regulations.
-
-**If you are considering using any peptide, consult a licensed physician. Do not self-prescribe. Do not self-inject.**
+- Inclusion of any peptide does **NOT** imply it is safe, effective, legal, or appropriate.
+- Many peptides are **experimental, off-label, inadequately studied, or not approved** for human use.
+- **NO dosing information, NO protocol design, NO usage recommendations** are provided.
+- Any decisions regarding peptide use must be made **with a qualified healthcare professional**.
 
 ---
 
-## Overview
+## What Is This?
 
-The Frontier Peptide Atlas is a computational research framework that organizes non-GLP-1 peptides by mechanism, effect, and risk topology using modern representation learning and topological data analysis.
+The Frontier Peptide Atlas is a **foundational knowledge resource** that systematically maps the mechanism space of under-characterized peptides — particularly those in the regenerative, immune-modulatory, and anabolic domains that exist outside mainstream pharmaceutical development.
 
-### What This Project Does
+Think of it as:
+- **ImageNet for peptide mechanisms** — A structured, labeled dataset enabling computational research
+- **Gene Ontology for peptide effects** — A formal vocabulary linking compounds to biological outcomes
+- **AlphaFold DB for peptide relationships** — Pretrained embeddings encoding mechanistic similarity
 
-- Constructs a **heterogeneous knowledge graph** linking peptides to molecular targets, pathways, effects, and risks
-- Trains a **graph neural network** to learn peptide embeddings that capture mechanistic relationships
-- Projects embeddings into **hyperbolic (Poincaré) space** to preserve hierarchical structure
-- Applies **topological data analysis** (Mapper algorithm) to reveal cluster structure and mechanistic bridges
-- Generates a **"world map"** visualization of peptide mechanism space
+### Why This Matters
 
-### What This Project Does NOT Do
+The peptide landscape is fragmented:
+- **Approved compounds** (GLP-1 agonists, insulin) are well-documented
+- **Research peptides** (BPC-157, TB-500, Thymosin alpha-1) exist in a gray zone with scattered evidence
+- **No unified resource** maps these compounds by mechanism, evidence quality, and risk profile
 
-- Does NOT provide dosing or protocol recommendations
-- Does NOT suggest therapeutic interventions
-- Does NOT claim efficacy for any peptide
-- Does NOT propose new drug candidates
-- Does NOT offer clinical decision support
+The Peptide Atlas fills this gap with:
+1. A **heterogeneous knowledge graph** linking peptides to molecular targets, pathways, effects, and risks
+2. **Graph neural network embeddings** that encode mechanistic relationships
+3. An **evidence taxonomy** that rigorously classifies data quality
+4. **Query APIs** for programmatic access
 
-### Peptide Classes Covered
+---
 
-| Class | Examples | Focus |
-|-------|----------|-------|
-| GH/GHRH Axis | Sermorelin-class, CJC-class | Growth hormone releasing |
-| GH Secretagogues | Ipamorelin-class, MK-677-type | Ghrelin receptor agonism |
-| IGF-1/Insulin Axis | IGF-1, MGF concepts | Anabolic signaling |
-| Regenerative/Repair | BPC-class, TB-500-class | Tissue healing |
-| Thymic/Immune | Thymosin alpha-1–class | Immune modulation |
-| CNS/Neurotrophic | Semax-class, Selank-class | Neuroprotection |
-| Longevity | Epithalon-class, mitochondrial peptides | Cellular resilience |
+## Core Assets
 
-**Note:** GLP-1 agonists are deliberately de-emphasized (included as reference only).
+### 1. Knowledge Graph (`data/processed/kg.json`)
+
+Structured relationships between:
+- **40+ curated peptides** across 8 mechanism classes
+- **20+ molecular targets** (receptors, tissues, cell types)
+- **18 biological pathways** (GH/IGF-1 axis, PI3K-Akt-mTOR, etc.)
+- **16 effect domains** (anabolic, regenerative, cognitive, etc.)
+- **14 risk categories** (with severity and reversibility annotations)
+
+### 2. Pretrained Embeddings (`data/processed/embeddings.pt`)
+
+64-dimensional vectors for each peptide encoding:
+- Mechanistic similarity (peptides with similar targets cluster together)
+- Pathway relationships (shared pathway involvement)
+- Effect profiles (similar outcome patterns)
+
+### 3. Evidence Taxonomy
+
+Every peptide and relationship is classified:
+
+| Tier | Description | Confidence | Example |
+|------|-------------|------------|---------|
+| 1 | Regulatory approval | 1.00 | Semaglutide, Tesamorelin |
+| 2 | Phase II/III RCT | 0.85 | Thymosin alpha-1 |
+| 3 | Early clinical | 0.65 | Sermorelin, MK-677 |
+| 4 | Preclinical only | 0.45 | BPC-157, TB-500 |
+| 5 | Mechanistic/in vitro | 0.25 | FOXO4-DRI |
+| 6 | Anecdotal | 0.15 | Many "research" peptides |
+| Unknown | Insufficient data | 0.05 | Treat with extreme caution |
+
+### 4. Query API
+
+```python
+from peptide_atlas import PeptideAtlas
+
+atlas = PeptideAtlas.load("data/processed/")
+
+# Find peptides by mechanism
+gh_secretagogues = atlas.query_by_class("ghs_ghrelin_mimetic")
+
+# Find similar peptides (embedding space)
+similar_to_bpc157 = atlas.find_similar("BPC-157", k=5)
+
+# Filter by evidence quality
+clinical_grade = atlas.query_by_evidence(min_tier=3)
+
+# Get pathway relationships
+igf_pathway_peptides = atlas.query_by_pathway("PI3K-Akt-mTOR")
+```
+
+---
+
+## Peptide Classes Covered
+
+| Class | Count | Examples | Evidence Range |
+|-------|-------|----------|----------------|
+| GH/GHRH Axis | 4 | Sermorelin, Tesamorelin, CJC-1295 | Tier 1-4 |
+| GH Secretagogues | 5 | Ipamorelin, GHRP-2, MK-677 | Tier 2-4 |
+| IGF-1/Insulin Axis | 4 | Mecasermin, IGF-1 LR3, MGF | Tier 1-5 |
+| Regenerative/Repair | 5 | BPC-157, TB-500, GHK-Cu | Tier 3-4 |
+| Thymic/Immune | 4 | Thymosin alpha-1, LL-37 | Tier 2-4 |
+| CNS/Neurotrophic | 5 | Semax, Selank, Dihexa | Tier 2-5 |
+| Longevity/Cellular | 5 | Epithalon, SS-31, MOTS-c | Tier 2-5 |
+| Metabolic | 3 | Pramlintide, Oxyntomodulin | Tier 1-3 |
+
+**Note:** GLP-1 agonists (Semaglutide, Tirzepatide) are included as reference landmarks only — they are well-characterized elsewhere.
 
 ---
 
 ## Installation
 
 ```bash
-# Clone repository
 git clone https://github.com/biohackingmathematician/frontier-pep.git
-cd frontier-pep/peptide-atlas
+cd frontier-pep
 
-# Create virtual environment
+# Create environment
 python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+source venv/bin/activate
 
-# Install dependencies
+# Install
 pip install -e ".[dev]"
 ```
 
 ## Quick Start
 
 ```bash
-# Build knowledge graph from curated data
-peptide-atlas build-kg
+# Build knowledge graph
+peptide-atlas build-kg --output data/processed/kg.json
 
-# Train GNN encoder
-peptide-atlas train --config configs/model_config.yaml
+# Train embeddings
+peptide-atlas train --epochs 100 --output data/processed/embeddings.pt
 
-# Run TDA analysis
-peptide-atlas analyze-tda --config configs/tda_config.yaml
+# Query the atlas
+peptide-atlas query --similar-to "BPC-157" --k 5
 
-# Generate world map visualization
-peptide-atlas visualize --output outputs/world_map.html
+# Launch explorer interface
+peptide-atlas explore --port 8050
 ```
+
+## Python API
+
+```python
+from peptide_atlas import PeptideAtlas, print_disclaimer
+
+print_disclaimer()
+
+# Load atlas
+atlas = PeptideAtlas.load("data/processed/")
+
+# Explore
+print(f"Peptides: {atlas.num_peptides}")
+print(f"Targets: {atlas.num_targets}")
+print(f"Pathways: {atlas.num_pathways}")
+
+# Query
+regenerative = atlas.query_by_class("regenerative_repair")
+for p in regenerative:
+    print(f"  {p.name}: {p.evidence_tier}")
+```
+
+---
 
 ## Project Structure
 
 ```
-peptide-atlas/
-├── src/peptide_atlas/     # Main package
-│   ├── data/              # Data schemas and loaders
-│   ├── kg/                # Knowledge graph construction
-│   ├── models/            # GNN and hyperbolic embeddings
-│   ├── tda/               # Topological data analysis
-│   └── viz/               # Visualization
-├── data/                  # Data files
-├── configs/               # Configuration files
-├── notebooks/             # Jupyter notebooks
-└── tests/                 # Unit tests
+frontier-pep/
+├── src/peptide_atlas/
+│   ├── data/           # Schemas, loaders, catalog
+│   ├── kg/             # Knowledge graph construction
+│   ├── models/         # GNN encoder, hyperbolic embeddings
+│   ├── tda/            # Topological data analysis
+│   ├── api/            # Query interface
+│   └── explorer/       # Visual exploration tool
+├── data/
+│   ├── processed/      # KG JSON, embeddings, assets
+│   └── schemas/        # Ontology definitions
+├── configs/            # Model and pipeline configs
+├── scripts/            # CLI entry points
+├── notebooks/          # Research notebooks
+└── tests/              # Unit tests
 ```
 
-## Evidence Taxonomy
+---
 
-All peptides are classified by evidence tier:
+## Use Cases
 
-| Tier | Description | Interpretation |
-|------|-------------|----------------|
-| 1 | Regulatory approval | Highest confidence |
-| 2 | Phase II/III RCT data | Strong clinical evidence |
-| 3 | Early clinical trials | Preliminary human data |
-| 4 | Preclinical only | Animal/cell studies |
-| 5 | Mechanistic only | In vitro / theoretical |
-| 6 | Anecdotal | Case reports, uncontrolled |
-| Unknown | Insufficient data | Treat with high caution |
+### For Researchers
+- Query mechanistic relationships: "What pathways does Thymosin alpha-1 modulate?"
+- Find similar compounds: "What's mechanistically similar to Semax?"
+- Evidence filtering: "Show me only peptides with Phase II+ data"
+
+### For Developers
+- Build on the knowledge graph for downstream applications
+- Use pretrained embeddings for peptide similarity search
+- Extend the ontology with new compounds
+
+### For Writers/Educators
+- Understand the evidence landscape for specific peptides
+- Visualize mechanistic relationships
+- Reference a structured, citable resource
+
+---
+
+## What This Project Does NOT Do
+
+- Does NOT provide dosing or protocol recommendations
+- Does NOT suggest therapeutic interventions
+- Does NOT claim efficacy for any compound
+- Does NOT offer clinical decision support
+- Does NOT propose compounds for human use
+- Does NOT replace consultation with healthcare professionals
+
+---
 
 ## Citation
-
-If you use this work, please cite:
 
 ```bibtex
 @software{frontier_peptide_atlas,
   author = {Chan, Agna},
-  title = {The Frontier Peptide Atlas: Graph Foundations and Topological Data Analysis for Mapping Under-Characterized Peptide Mechanism Space},
+  title = {The Frontier Peptide Atlas: A Foundational Knowledge Resource for Under-Characterized Peptide Mechanisms},
   year = {2025},
-  month = {December},
+  version = {0.1.0},
   url = {https://github.com/biohackingmathematician/frontier-pep}
 }
 ```
 
+---
+
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE).
 
-## Ethics & Responsible Use
+## Ethics
 
-See [ETHICS.md](ETHICS.md) for full discussion of ethical considerations, limitations, and responsible use guidelines.
+See [ETHICS.md](ETHICS.md) for responsible use guidelines.
 
 ---
 
-**Remember: This is a research tool, not a clinical guide. Consult healthcare professionals for any medical decisions.**
-
+**This is a research tool, not a clinical guide. Consult healthcare professionals for any medical decisions.**

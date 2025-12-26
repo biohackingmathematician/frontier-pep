@@ -96,3 +96,68 @@ def load_viz_config(config_dir: Optional[Path] = None) -> dict:
     
     return load_yaml_config(config_dir / "viz_config.yaml")
 
+
+def load_embeddings(path: Path) -> "np.ndarray":
+    """
+    Load peptide embeddings from file.
+    
+    Supports .npy (NumPy) and .pt (PyTorch) formats.
+    
+    Args:
+        path: Path to embeddings file
+        
+    Returns:
+        Embeddings as numpy array [n_peptides, dim]
+    """
+    import numpy as np
+    
+    path = Path(path)
+    
+    if path.suffix == ".npy":
+        embeddings = np.load(path)
+    elif path.suffix == ".pt":
+        try:
+            import torch
+            data = torch.load(path, map_location="cpu")
+            if isinstance(data, dict):
+                # Assume embeddings are under a key
+                embeddings = data.get("embeddings", data.get("peptide_embeddings", data))
+                if hasattr(embeddings, "numpy"):
+                    embeddings = embeddings.numpy()
+            else:
+                embeddings = data.numpy() if hasattr(data, "numpy") else data
+        except ImportError:
+            raise ImportError("PyTorch required to load .pt files")
+    else:
+        raise ValueError(f"Unsupported embedding format: {path.suffix}")
+    
+    logger.info(f"Loaded embeddings from {path}: shape {embeddings.shape}")
+    return embeddings
+
+
+def save_embeddings(embeddings: "np.ndarray", path: Path, format: str = "npy") -> None:
+    """
+    Save peptide embeddings to file.
+    
+    Args:
+        embeddings: Embeddings array [n_peptides, dim]
+        path: Output path
+        format: "npy" or "pt"
+    """
+    import numpy as np
+    
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    
+    if format == "npy":
+        np.save(path, embeddings)
+    elif format == "pt":
+        try:
+            import torch
+            torch.save(torch.from_numpy(embeddings), path)
+        except ImportError:
+            raise ImportError("PyTorch required to save .pt files")
+    else:
+        raise ValueError(f"Unsupported format: {format}")
+    
+    logger.info(f"Saved embeddings to {path}")
