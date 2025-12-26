@@ -48,6 +48,7 @@ def get_disclaimer() -> str:
 # Convenience imports
 from peptide_atlas.kg import build_knowledge_graph
 from peptide_atlas.data.peptide_catalog import get_curated_peptides
+from peptide_atlas.api.atlas import PeptideAtlas
 
 __all__ = [
     "__version__",
@@ -57,4 +58,5 @@ __all__ = [
     "build_knowledge_graph",
     "get_curated_peptides",
     "DISCLAIMER_TEXT",
+    "PeptideAtlas",
 ]
