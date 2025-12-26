@@ -45,6 +45,7 @@ class PeptideClass(str, Enum):
     METABOLIC_INCRETIN = "metabolic_incretin"  # Metabolic peptides (non-GLP-1 focus)
     CNS_NEUROTROPHIC = "cns_neurotrophic"  # Neuroprotective peptides
     LONGEVITY_CELLULAR = "longevity_cellular"  # Aging/senescence related
+    ANTIMICROBIAL = "antimicrobial"  # Antimicrobial peptides
     GLP1_REFERENCE = "glp1_reference"  # GLP-1 agonists (reference only, not focus)
     OTHER = "other"
 
@@ -231,6 +232,7 @@ PEPTIDE_CLASS_COLORS: dict[PeptideClass, str] = {
     PeptideClass.METABOLIC_INCRETIN: "#8c564b",
     PeptideClass.CNS_NEUROTROPHIC: "#e377c2",
     PeptideClass.LONGEVITY_CELLULAR: "#17becf",
+    PeptideClass.ANTIMICROBIAL: "#BB8FCE",
     PeptideClass.GLP1_REFERENCE: "#7f7f7f",
     PeptideClass.OTHER: "#bcbd22",
 }

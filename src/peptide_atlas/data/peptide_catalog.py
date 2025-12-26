@@ -451,6 +451,229 @@ def get_curated_peptides() -> list[PeptideNode]:
         ),
     ])
     
+    # =========================================================================
+    # ADDITIONAL GH SECRETAGOGUES
+    # =========================================================================
+    
+    peptides.extend([
+        PeptideNode(
+            canonical_name="Anamorelin",
+            synonyms=["ONO-7643", "RC-1291"],
+            peptide_class=PeptideClass.GHS_GHRELIN_MIMETIC,
+            subclass="Non-peptide ghrelin receptor agonist",
+            regulatory_status=RegulatoryStatus.APPROVED,
+            evidence_tier=EvidenceTier.TIER_1_APPROVED,
+            administration_routes=[AdministrationRoute.ORAL],
+            description="Oral ghrelin receptor agonist. Approved in Japan for cancer cachexia.",
+            drugbank_id="DB12329",
+        ),
+    ])
+    
+    # =========================================================================
+    # ADDITIONAL REGENERATIVE/REPAIR PEPTIDES
+    # =========================================================================
+    
+    peptides.extend([
+        PeptideNode(
+            canonical_name="KPV",
+            synonyms=["Lys-Pro-Val", "alpha-MSH fragment"],
+            peptide_class=PeptideClass.REGENERATIVE_REPAIR,
+            subclass="alpha-MSH C-terminal tripeptide",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_4_PRECLINICAL,
+            administration_routes=[AdministrationRoute.INJECTABLE_SC, AdministrationRoute.ORAL, AdministrationRoute.TOPICAL],
+            description="Anti-inflammatory tripeptide derived from alpha-MSH.",
+        ),
+        PeptideNode(
+            canonical_name="Collagen Peptides",
+            synonyms=["Hydrolyzed Collagen", "Collagen Hydrolysate"],
+            peptide_class=PeptideClass.REGENERATIVE_REPAIR,
+            subclass="Structural protein fragments",
+            regulatory_status=RegulatoryStatus.APPROVED,
+            evidence_tier=EvidenceTier.TIER_2_LATE_CLINICAL,
+            administration_routes=[AdministrationRoute.ORAL],
+            description="Hydrolyzed collagen fragments. Multiple RCTs for skin and joint health.",
+        ),
+    ])
+    
+    # =========================================================================
+    # ADDITIONAL THYMIC/IMMUNE PEPTIDES
+    # =========================================================================
+    
+    peptides.extend([
+        PeptideNode(
+            canonical_name="Thymulin",
+            synonyms=["Facteur Thymique Serique", "FTS"],
+            peptide_class=PeptideClass.THYMIC_IMMUNE,
+            subclass="Thymic nonapeptide",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_3_EARLY_CLINICAL,
+            administration_routes=[AdministrationRoute.INJECTABLE_SC],
+            description="Zinc-dependent thymic hormone. Requires zinc for biological activity.",
+        ),
+        PeptideNode(
+            canonical_name="Thymopentin",
+            synonyms=["TP-5", "Timunox"],
+            peptide_class=PeptideClass.THYMIC_IMMUNE,
+            subclass="Thymopoietin fragment",
+            regulatory_status=RegulatoryStatus.APPROVED,
+            evidence_tier=EvidenceTier.TIER_2_LATE_CLINICAL,
+            administration_routes=[AdministrationRoute.INJECTABLE_SC],
+            description="Active pentapeptide fragment of thymopoietin. Approved in some regions.",
+        ),
+        PeptideNode(
+            canonical_name="Immunofan",
+            synonyms=["Imunofan"],
+            peptide_class=PeptideClass.THYMIC_IMMUNE,
+            subclass="Synthetic hexapeptide immunomodulator",
+            regulatory_status=RegulatoryStatus.APPROVED,
+            evidence_tier=EvidenceTier.TIER_2_LATE_CLINICAL,
+            administration_routes=[AdministrationRoute.INJECTABLE_SC, AdministrationRoute.INTRANASAL],
+            description="Synthetic immunomodulatory hexapeptide. Approved in Russia.",
+        ),
+    ])
+    
+    # =========================================================================
+    # ADDITIONAL CNS/NEUROTROPHIC PEPTIDES
+    # =========================================================================
+    
+    peptides.extend([
+        PeptideNode(
+            canonical_name="NA-Selank",
+            synonyms=["N-Acetyl Selank"],
+            peptide_class=PeptideClass.CNS_NEUROTROPHIC,
+            subclass="Acetylated tuftsin analog",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_4_PRECLINICAL,
+            administration_routes=[AdministrationRoute.INTRANASAL],
+            description="N-acetylated form of Selank with improved stability.",
+        ),
+        PeptideNode(
+            canonical_name="Cortexin",
+            synonyms=["Cortex polypeptides"],
+            peptide_class=PeptideClass.CNS_NEUROTROPHIC,
+            subclass="Brain-derived polypeptide complex",
+            regulatory_status=RegulatoryStatus.APPROVED,
+            evidence_tier=EvidenceTier.TIER_2_LATE_CLINICAL,
+            administration_routes=[AdministrationRoute.INJECTABLE_IM],
+            description="Polypeptide complex from brain cortex. Approved in Russia for neurological conditions.",
+        ),
+        PeptideNode(
+            canonical_name="DSIP",
+            synonyms=["Delta Sleep-Inducing Peptide"],
+            peptide_class=PeptideClass.CNS_NEUROTROPHIC,
+            subclass="Hypothalamic nonapeptide",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_3_EARLY_CLINICAL,
+            administration_routes=[AdministrationRoute.INJECTABLE_SC, AdministrationRoute.INTRANASAL],
+            description="Endogenous nonapeptide involved in sleep regulation.",
+        ),
+        PeptideNode(
+            canonical_name="FGL",
+            synonyms=["FG Loop peptide", "NCAM mimetic"],
+            peptide_class=PeptideClass.CNS_NEUROTROPHIC,
+            subclass="NCAM-derived peptide",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_4_PRECLINICAL,
+            administration_routes=[AdministrationRoute.INJECTABLE_SC],
+            description="NCAM-derived peptide promoting neuroplasticity and memory.",
+        ),
+    ])
+    
+    # =========================================================================
+    # ADDITIONAL LONGEVITY/CELLULAR PEPTIDES
+    # =========================================================================
+    
+    peptides.extend([
+        PeptideNode(
+            canonical_name="SHLP2",
+            synonyms=["Small Humanin-Like Peptide 2"],
+            peptide_class=PeptideClass.LONGEVITY_CELLULAR,
+            subclass="Mitochondrial-derived peptide",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_5_MECHANISTIC,
+            administration_routes=[AdministrationRoute.INJECTABLE_SC],
+            description="Mitochondrial-derived peptide with cytoprotective effects.",
+        ),
+        PeptideNode(
+            canonical_name="SHLP6",
+            synonyms=["Small Humanin-Like Peptide 6"],
+            peptide_class=PeptideClass.LONGEVITY_CELLULAR,
+            subclass="Mitochondrial-derived peptide",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_5_MECHANISTIC,
+            administration_routes=[AdministrationRoute.INJECTABLE_SC],
+            description="Mitochondrial-derived peptide. Part of the humanin family.",
+        ),
+        PeptideNode(
+            canonical_name="Pinealon",
+            synonyms=["EDR peptide", "Glu-Asp-Arg"],
+            peptide_class=PeptideClass.LONGEVITY_CELLULAR,
+            subclass="Synthetic tripeptide bioregulator",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_4_PRECLINICAL,
+            administration_routes=[AdministrationRoute.ORAL, AdministrationRoute.INJECTABLE_SC],
+            description="Short peptide bioregulator from Khavinson research.",
+        ),
+        PeptideNode(
+            canonical_name="Vilon",
+            synonyms=["KE peptide", "Lys-Glu"],
+            peptide_class=PeptideClass.LONGEVITY_CELLULAR,
+            subclass="Synthetic dipeptide bioregulator",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_4_PRECLINICAL,
+            administration_routes=[AdministrationRoute.ORAL],
+            description="Thymus-targeting dipeptide bioregulator.",
+        ),
+    ])
+    
+    # =========================================================================
+    # ANTIMICROBIAL PEPTIDES (NEW CLASS)
+    # =========================================================================
+    
+    peptides.extend([
+        PeptideNode(
+            canonical_name="Lactoferricin",
+            synonyms=["Lfcin", "Lactoferricin B"],
+            peptide_class=PeptideClass.ANTIMICROBIAL,
+            subclass="Lactoferrin-derived peptide",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_4_PRECLINICAL,
+            administration_routes=[AdministrationRoute.ORAL, AdministrationRoute.TOPICAL],
+            description="Antimicrobial peptide derived from lactoferrin.",
+        ),
+        PeptideNode(
+            canonical_name="Human Beta-Defensin 2",
+            synonyms=["hBD-2", "DEFB4A"],
+            peptide_class=PeptideClass.ANTIMICROBIAL,
+            subclass="Defensin",
+            regulatory_status=RegulatoryStatus.RESEARCH_ONLY,
+            evidence_tier=EvidenceTier.TIER_4_PRECLINICAL,
+            administration_routes=[AdministrationRoute.TOPICAL],
+            description="Inducible human defensin with antimicrobial activity.",
+        ),
+        PeptideNode(
+            canonical_name="Pexiganan",
+            synonyms=["MSI-78", "Locilex"],
+            peptide_class=PeptideClass.ANTIMICROBIAL,
+            subclass="Magainin analog",
+            regulatory_status=RegulatoryStatus.INVESTIGATIONAL,
+            evidence_tier=EvidenceTier.TIER_3_EARLY_CLINICAL,
+            administration_routes=[AdministrationRoute.TOPICAL],
+            description="Synthetic magainin analog. Phase III for diabetic foot infections.",
+        ),
+        PeptideNode(
+            canonical_name="Omiganan",
+            synonyms=["MBI-226", "CLS001"],
+            peptide_class=PeptideClass.ANTIMICROBIAL,
+            subclass="Indolicidin analog",
+            regulatory_status=RegulatoryStatus.INVESTIGATIONAL,
+            evidence_tier=EvidenceTier.TIER_3_EARLY_CLINICAL,
+            administration_routes=[AdministrationRoute.TOPICAL],
+            description="Synthetic antimicrobial peptide. Phase III trials for skin infections.",
+        ),
+    ])
+    
     return peptides
 
 

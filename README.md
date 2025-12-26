@@ -46,16 +46,16 @@ The Peptide Atlas fills this gap with:
 
 ## Core Assets
 
-### 1. Knowledge Graph (`data/processed/kg.json`)
+### 1. Knowledge Graph
 
 Structured relationships between:
-- **40+ curated peptides** across 8 mechanism classes
+- **55+ curated peptides** across 9 mechanism classes
 - **20+ molecular targets** (receptors, tissues, cell types)
 - **18 biological pathways** (GH/IGF-1 axis, PI3K-Akt-mTOR, etc.)
 - **16 effect domains** (anabolic, regenerative, cognitive, etc.)
 - **14 risk categories** (with severity and reversibility annotations)
 
-### 2. Pretrained Embeddings (`data/processed/embeddings.pt`)
+### 2. Pretrained Embeddings
 
 64-dimensional vectors for each peptide encoding:
 - Mechanistic similarity (peptides with similar targets cluster together)
@@ -66,14 +66,14 @@ Structured relationships between:
 
 Every peptide and relationship is classified:
 
-| Tier | Description | Confidence | Example |
-|------|-------------|------------|---------|
-| 1 | Regulatory approval | 1.00 | Semaglutide, Tesamorelin |
-| 2 | Phase II/III RCT | 0.85 | Thymosin alpha-1 |
-| 3 | Early clinical | 0.65 | Sermorelin, MK-677 |
-| 4 | Preclinical only | 0.45 | BPC-157, TB-500 |
-| 5 | Mechanistic/in vitro | 0.25 | FOXO4-DRI |
-| 6 | Anecdotal | 0.15 | Many "research" peptides |
+| Tier | Description | Confidence | Examples |
+|------|-------------|------------|----------|
+| 1 | Regulatory approval | 1.00 | Semaglutide, Tesamorelin, Mecasermin |
+| 2 | Phase II/III RCT | 0.85 | Thymosin alpha-1, SS-31/Elamipretide |
+| 3 | Early clinical | 0.65 | Sermorelin, MK-677, Semax |
+| 4 | Preclinical only | 0.45 | BPC-157, TB-500, Epithalon |
+| 5 | Mechanistic/in vitro | 0.25 | FOXO4-DRI, Humanin |
+| 6 | Anecdotal | 0.15 | Many research peptides |
 | Unknown | Insufficient data | 0.05 | Treat with extreme caution |
 
 ### 4. Query API
@@ -83,11 +83,12 @@ from peptide_atlas import PeptideAtlas
 
 atlas = PeptideAtlas.load("data/processed/")
 
-# Find peptides by mechanism
+# Find peptides by mechanism class
 gh_secretagogues = atlas.query_by_class("ghs_ghrelin_mimetic")
 
 # Find similar peptides (embedding space)
 similar_to_bpc157 = atlas.find_similar("BPC-157", k=5)
+# Returns: TB-500, Thymosin Beta-4, GHK-Cu, AOD9604, ...
 
 # Filter by evidence quality
 clinical_grade = atlas.query_by_evidence(min_tier=3)
@@ -102,16 +103,17 @@ igf_pathway_peptides = atlas.query_by_pathway("PI3K-Akt-mTOR")
 
 | Class | Count | Examples | Evidence Range |
 |-------|-------|----------|----------------|
-| GH/GHRH Axis | 4 | Sermorelin, Tesamorelin, CJC-1295 | Tier 1-4 |
-| GH Secretagogues | 5 | Ipamorelin, GHRP-2, MK-677 | Tier 2-4 |
-| IGF-1/Insulin Axis | 4 | Mecasermin, IGF-1 LR3, MGF | Tier 1-5 |
-| Regenerative/Repair | 5 | BPC-157, TB-500, GHK-Cu | Tier 3-4 |
-| Thymic/Immune | 4 | Thymosin alpha-1, LL-37 | Tier 2-4 |
-| CNS/Neurotrophic | 5 | Semax, Selank, Dihexa | Tier 2-5 |
-| Longevity/Cellular | 5 | Epithalon, SS-31, MOTS-c | Tier 2-5 |
-| Metabolic | 3 | Pramlintide, Oxyntomodulin | Tier 1-3 |
+| GH/GHRH Axis | 5 | Sermorelin, Tesamorelin, CJC-1295 | Tier 1-4 |
+| GH Secretagogues | 6 | Ipamorelin, GHRP-2, GHRP-6, Hexarelin, MK-677 | Tier 2-4 |
+| IGF-1/Insulin Axis | 5 | Mecasermin, IGF-1 LR3, MGF, PEG-MGF | Tier 1-5 |
+| Regenerative/Repair | 6 | BPC-157, TB-500, Thymosin Beta-4, GHK-Cu | Tier 3-4 |
+| Thymic/Immune | 5 | Thymosin alpha-1, Thymalin, LL-37 | Tier 2-4 |
+| CNS/Neurotrophic | 7 | Semax, Selank, Dihexa, P21, Cerebrolysin | Tier 2-5 |
+| Longevity/Cellular | 6 | Epithalon, SS-31, MOTS-c, Humanin | Tier 2-5 |
+| Metabolic | 4 | Pramlintide, Oxyntomodulin | Tier 1-4 |
+| Antimicrobial | 4 | LL-37, Lactoferricin, Pexiganan | Tier 2-4 |
 
-**Note:** GLP-1 agonists (Semaglutide, Tirzepatide) are included as reference landmarks only — they are well-characterized elsewhere.
+**Note:** GLP-1 agonists (Semaglutide, Tirzepatide) are included as reference landmarks only.
 
 ---
 
@@ -121,11 +123,9 @@ igf_pathway_peptides = atlas.query_by_pathway("PI3K-Akt-mTOR")
 git clone https://github.com/biohackingmathematician/frontier-pep.git
 cd frontier-pep
 
-# Create environment
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Install
 pip install -e ".[dev]"
 ```
 
@@ -133,16 +133,18 @@ pip install -e ".[dev]"
 
 ```bash
 # Build knowledge graph
-peptide-atlas build-kg --output data/processed/kg.json
+python scripts/build_kg.py --output data/processed/kg.json
 
 # Train embeddings
-peptide-atlas train --epochs 100 --output data/processed/embeddings.pt
+python scripts/train_gnn.py --epochs 100 --output data/processed/
 
 # Query the atlas
-peptide-atlas query --similar-to "BPC-157" --k 5
+python scripts/query_atlas.py stats
+python scripts/query_atlas.py similar "BPC-157" -k 5
+python scripts/query_atlas.py list --class regenerative_repair
 
-# Launch explorer interface
-peptide-atlas explore --port 8050
+# Run TDA analysis
+python scripts/run_tda.py --output outputs/tda/
 ```
 
 ## Python API
@@ -160,10 +162,15 @@ print(f"Peptides: {atlas.num_peptides}")
 print(f"Targets: {atlas.num_targets}")
 print(f"Pathways: {atlas.num_pathways}")
 
-# Query
+# Query by class
 regenerative = atlas.query_by_class("regenerative_repair")
 for p in regenerative:
-    print(f"  {p.name}: {p.evidence_tier}")
+    print(f"  {p.canonical_name}: {p.evidence_tier.value}")
+
+# Similarity search
+similar = atlas.find_similar("Semax", k=5)
+for r in similar:
+    print(f"  {r.peptide.canonical_name}: {r.similarity:.3f}")
 ```
 
 ---
@@ -173,39 +180,32 @@ for p in regenerative:
 ```
 frontier-pep/
 ├── src/peptide_atlas/
-│   ├── data/           # Schemas, loaders, catalog
-│   ├── kg/             # Knowledge graph construction
+│   ├── data/           # Schemas, loaders, peptide catalog
+│   ├── kg/             # Knowledge graph construction and export
 │   ├── models/         # GNN encoder, hyperbolic embeddings
 │   ├── tda/            # Topological data analysis
-│   ├── api/            # Query interface
-│   └── explorer/       # Visual exploration tool
+│   ├── api/            # Query interface (PeptideAtlas class)
+│   └── viz/            # Visualization utilities
 ├── data/
-│   ├── processed/      # KG JSON, embeddings, assets
+│   ├── processed/      # KG JSON, embeddings, trained models
 │   └── schemas/        # Ontology definitions
-├── configs/            # Model and pipeline configs
+├── configs/            # Model and pipeline configurations
 ├── scripts/            # CLI entry points
-├── notebooks/          # Research notebooks
+├── notebooks/          # Research and validation notebooks
+├── outputs/            # Generated outputs (TDA, visualizations)
 └── tests/              # Unit tests
 ```
 
 ---
 
-## Use Cases
+## Validation
 
-### For Researchers
-- Query mechanistic relationships: "What pathways does Thymosin alpha-1 modulate?"
-- Find similar compounds: "What's mechanistically similar to Semax?"
-- Evidence filtering: "Show me only peptides with Phase II+ data"
+Embedding quality validated via:
+- **t-SNE visualization** — Peptides cluster by mechanism class
+- **Silhouette score** — Quantitative cluster quality
+- **Nearest neighbor accuracy** — Similar peptides share targets/pathways
 
-### For Developers
-- Build on the knowledge graph for downstream applications
-- Use pretrained embeddings for peptide similarity search
-- Extend the ontology with new compounds
-
-### For Writers/Educators
-- Understand the evidence landscape for specific peptides
-- Visualize mechanistic relationships
-- Reference a structured, citable resource
+See `notebooks/05_embedding_validation.ipynb` for full analysis.
 
 ---
 
@@ -215,7 +215,6 @@ frontier-pep/
 - Does NOT suggest therapeutic interventions
 - Does NOT claim efficacy for any compound
 - Does NOT offer clinical decision support
-- Does NOT propose compounds for human use
 - Does NOT replace consultation with healthcare professionals
 
 ---

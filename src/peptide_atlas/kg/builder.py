@@ -121,6 +121,7 @@ class KnowledgeGraphBuilder:
             ("Vasculature", TargetType.TISSUE, "Blood vessels"),
             ("Mitochondria", TargetType.OTHER, "Mitochondria"),
             ("Immune Cells", TargetType.CELL_TYPE, "Immune cells (T-cells, NK cells, etc.)"),
+            ("Cell Membrane", TargetType.OTHER, "Bacterial/cellular membrane target for antimicrobial peptides"),
         ]
         
         for name, ttype, desc in targets_data:
@@ -278,6 +279,10 @@ class KnowledgeGraphBuilder:
         # GLP-1 Reference
         elif peptide.peptide_class.value == "glp1_reference":
             self._add_glp1_reference_relationships(peptide)
+        
+        # Antimicrobial
+        elif peptide.peptide_class.value == "antimicrobial":
+            self._add_antimicrobial_relationships(peptide)
     
     def _add_ghrh_analog_relationships(self, peptide: PeptideNode) -> None:
         """Add relationships for GHRH analogs."""
@@ -671,6 +676,77 @@ class KnowledgeGraphBuilder:
                     target_id=risk_id,
                     evidence_tier=peptide.evidence_tier,
                     confidence=Confidence.HIGH,
+                ))
+    
+    def _add_antimicrobial_relationships(self, peptide: PeptideNode) -> None:
+        """Add relationships for antimicrobial peptides."""
+        # Binds cell membrane
+        if membrane_id := self._get_target_id("Cell Membrane"):
+            self.kg.binds_edges.append(BindsEdge(
+                source_id=peptide.id,
+                target_id=membrane_id,
+                binding_type=BindingType.AGONIST,
+                confidence=Confidence.HIGH,
+            ))
+        
+        # Also target immune cells for immune modulation
+        if immune_id := self._get_target_id("Immune Cells"):
+            self.kg.binds_edges.append(BindsEdge(
+                source_id=peptide.id,
+                target_id=immune_id,
+                binding_type=BindingType.AGONIST,
+                confidence=Confidence.MEDIUM,
+            ))
+        
+        # Modulates innate immunity
+        if innate_id := self._get_pathway_id("Innate Immunity"):
+            self.kg.modulates_edges.append(ModulatesEdge(
+                source_id=peptide.id,
+                target_id=innate_id,
+                direction="activates",
+                magnitude="moderate",
+                confidence=Confidence.MEDIUM,
+            ))
+        
+        # Some antimicrobials have wound healing effects
+        name_lower = peptide.canonical_name.lower()
+        if "ll-37" in name_lower or "cathelicidin" in name_lower:
+            if wound_id := self._get_pathway_id("Wound Healing"):
+                self.kg.modulates_edges.append(ModulatesEdge(
+                    source_id=peptide.id,
+                    target_id=wound_id,
+                    direction="activates",
+                    magnitude="moderate",
+                    confidence=Confidence.MEDIUM,
+                ))
+            # Regeneration effect
+            if effect_id := self._get_effect_id(EffectDomain.REGENERATION_REPAIR):
+                self.kg.effect_edges.append(AssociatedWithEffectEdge(
+                    source_id=peptide.id,
+                    target_id=effect_id,
+                    direction=EffectDirection.BENEFICIAL,
+                    evidence_tier=peptide.evidence_tier,
+                    confidence=Confidence.LOW,
+                ))
+        
+        # Effect: immune resilience
+        if effect_id := self._get_effect_id(EffectDomain.IMMUNE_RESILIENCE):
+            self.kg.effect_edges.append(AssociatedWithEffectEdge(
+                source_id=peptide.id,
+                target_id=effect_id,
+                direction=EffectDirection.BENEFICIAL,
+                evidence_tier=peptide.evidence_tier,
+                confidence=Confidence.MEDIUM,
+            ))
+        
+        # Risks: injection site reactions, unknown long-term
+        for risk_name in ["Injection Site Reactions", "Unknown Long-term Effects"]:
+            if risk_id := self._get_risk_id(risk_name):
+                self.kg.risk_edges.append(AssociatedWithRiskEdge(
+                    source_id=peptide.id,
+                    target_id=risk_id,
+                    evidence_tier=peptide.evidence_tier,
+                    confidence=Confidence.MEDIUM,
                 ))
     
     def to_networkx(self) -> nx.MultiDiGraph:
