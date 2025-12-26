@@ -1,18 +1,36 @@
 """
 Visualization module for the Peptide Atlas.
 
-Provides interactive visualizations of the peptide embedding space.
+NOTE: The core value of this project is in the knowledge graph and embeddings,
+not the visualizations. These are exploration tools.
 
 REMINDER: This project is for research and education only.
-No dosing, no protocols, no therapeutic recommendations.
 """
 
-from peptide_atlas.viz.world_map import create_world_map
-from peptide_atlas.viz.style import get_color_palette, DISCLAIMER_TEXT
+from peptide_atlas.viz.world_map import (
+    create_world_map,
+    create_mapper_visualization,
+)
+from peptide_atlas.viz.style import (
+    get_theme,
+    get_color_palette,
+    format_hover_text,
+    DISCLAIMER_TEXT,
+)
+
+# Visualization disclaimer
+VIZ_DISCLAIMER = (
+    "RESEARCH USE ONLY - Not medical advice. "
+    "No dosing or protocol recommendations. "
+    "Consult a healthcare professional."
+)
 
 __all__ = [
     "create_world_map",
+    "create_mapper_visualization",
+    "get_theme",
     "get_color_palette",
+    "format_hover_text",
+    "VIZ_DISCLAIMER",
     "DISCLAIMER_TEXT",
 ]
-

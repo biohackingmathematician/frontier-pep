@@ -1,227 +1,350 @@
 """
-Poincaré ball operations for hyperbolic embeddings.
+Poincaré ball embedding for the Peptide Atlas.
+
+Projects Euclidean embeddings from the GNN to the Poincaré ball,
+which better represents hierarchical relationships.
 
 REMINDER: This project is for research and education only.
 """
 
 from __future__ import annotations
 
+from typing import Optional
+
 import torch
 import torch.nn as nn
 
 
+def project_to_poincare(
+    x: torch.Tensor,
+    max_norm: float = 0.99,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    """
+    Project points to the Poincaré ball.
+    
+    Args:
+        x: Points to project [*, dim]
+        max_norm: Maximum norm (must be < 1 for stability)
+        eps: Small value for numerical stability
+        
+    Returns:
+        Projected points inside the unit ball
+    """
+    norm = torch.norm(x, p=2, dim=-1, keepdim=True).clamp(min=eps)
+    cond = norm > max_norm
+    return torch.where(cond, x * max_norm / norm, x)
+
+
+def exponential_map(
+    v: torch.Tensor,
+    base_point: Optional[torch.Tensor] = None,
+    curvature: float = 1.0,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    """
+    Exponential map from tangent space to Poincaré ball.
+    
+    Maps tangent vectors at base_point to points on the manifold.
+    
+    Args:
+        v: Tangent vectors [*, dim]
+        base_point: Base point (default: origin)
+        curvature: Curvature of the hyperbolic space
+        eps: Small value for numerical stability
+        
+    Returns:
+        Points on the Poincaré ball
+    """
+    c = curvature
+    sqrt_c = c ** 0.5
+    
+    if base_point is None:
+        # Exponential map at origin
+        v_norm = torch.norm(v, p=2, dim=-1, keepdim=True).clamp(min=eps)
+        return torch.tanh(sqrt_c * v_norm) * v / (sqrt_c * v_norm)
+    
+    # General exponential map
+    v_norm = torch.norm(v, p=2, dim=-1, keepdim=True).clamp(min=eps)
+    
+    # Conformal factor at base point
+    base_sq = torch.sum(base_point * base_point, dim=-1, keepdim=True)
+    lambda_x = 2 / (1 - c * base_sq + eps)
+    
+    # Compute exponential map
+    second_term = torch.tanh(sqrt_c * lambda_x * v_norm / 2) * v / (sqrt_c * v_norm)
+    
+    # Möbius addition with base point
+    result = mobius_addition(base_point, second_term, curvature)
+    
+    return project_to_poincare(result)
+
+
+def logarithmic_map(
+    y: torch.Tensor,
+    base_point: Optional[torch.Tensor] = None,
+    curvature: float = 1.0,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    """
+    Logarithmic map from Poincaré ball to tangent space.
+    
+    Maps points on the manifold to tangent vectors at base_point.
+    
+    Args:
+        y: Points on the Poincaré ball [*, dim]
+        base_point: Base point (default: origin)
+        curvature: Curvature of the hyperbolic space
+        eps: Small value for numerical stability
+        
+    Returns:
+        Tangent vectors at base_point
+    """
+    c = curvature
+    sqrt_c = c ** 0.5
+    
+    if base_point is None:
+        # Logarithmic map at origin
+        y_norm = torch.norm(y, p=2, dim=-1, keepdim=True).clamp(min=eps)
+        return torch.atanh(sqrt_c * y_norm.clamp(max=1-eps)) * y / (sqrt_c * y_norm)
+    
+    # Compute (-base_point) ⊕ y
+    diff = mobius_addition(-base_point, y, curvature)
+    diff_norm = torch.norm(diff, p=2, dim=-1, keepdim=True).clamp(min=eps)
+    
+    # Conformal factor at base point
+    base_sq = torch.sum(base_point * base_point, dim=-1, keepdim=True)
+    lambda_x = 2 / (1 - c * base_sq + eps)
+    
+    # Compute logarithmic map
+    result = (2 / (sqrt_c * lambda_x)) * torch.atanh(sqrt_c * diff_norm.clamp(max=1-eps)) * diff / diff_norm
+    
+    return result
+
+
+def mobius_addition(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    curvature: float = 1.0,
+    eps: float = 1e-8,
+) -> torch.Tensor:
+    """
+    Möbius addition in the Poincaré ball.
+    
+    This is the generalization of vector addition to hyperbolic space.
+    
+    Args:
+        x: First operand [*, dim]
+        y: Second operand [*, dim]
+        curvature: Curvature of the hyperbolic space
+        eps: Small value for numerical stability
+        
+    Returns:
+        x ⊕ y
+    """
+    c = curvature
+    
+    x_sq = torch.sum(x * x, dim=-1, keepdim=True)
+    y_sq = torch.sum(y * y, dim=-1, keepdim=True)
+    xy = torch.sum(x * y, dim=-1, keepdim=True)
+    
+    num = (1 + 2 * c * xy + c * y_sq) * x + (1 - c * x_sq) * y
+    denom = 1 + 2 * c * xy + c * c * x_sq * y_sq
+    
+    return num / (denom + eps)
+
+
 class PoincareEmbedding(nn.Module):
     """
-    Poincaré ball embedding layer.
+    Projects Euclidean embeddings to the Poincaré ball.
     
-    Maps points to the Poincaré ball (hyperbolic space) which is better
-    suited for representing hierarchical relationships.
+    The Poincaré ball is a model of hyperbolic space that is particularly
+    suited for representing hierarchical data, as it has more "room" near
+    the boundary for leaf nodes while keeping parent nodes near the center.
     """
     
     def __init__(
         self,
-        num_embeddings: int,
-        embedding_dim: int,
+        input_dim: int,
+        output_dim: Optional[int] = None,
         curvature: float = 1.0,
         max_norm: float = 0.99,
+        learnable_curvature: bool = False,
     ):
         """
-        Initialize Poincaré embeddings.
+        Initialize Poincaré embedding layer.
         
         Args:
-            num_embeddings: Number of embedding vectors
-            embedding_dim: Dimension of each embedding
-            curvature: Curvature of the hyperbolic space (default 1.0)
-            max_norm: Maximum norm for numerical stability
+            input_dim: Dimension of input Euclidean embeddings
+            output_dim: Dimension of output hyperbolic embeddings (default: same as input)
+            curvature: Curvature of the hyperbolic space (default: 1.0)
+            max_norm: Maximum norm for numerical stability (must be < 1)
+            learnable_curvature: Whether to learn the curvature parameter
         """
         super().__init__()
         
-        self.num_embeddings = num_embeddings
-        self.embedding_dim = embedding_dim
-        self.curvature = curvature
+        self.input_dim = input_dim
+        self.output_dim = output_dim or input_dim
         self.max_norm = max_norm
         
-        # Initialize embeddings uniformly in a small ball
-        embeddings = torch.randn(num_embeddings, embedding_dim) * 0.01
-        self.embeddings = nn.Parameter(embeddings)
-    
-    def forward(self, indices: torch.Tensor) -> torch.Tensor:
-        """
-        Get embeddings for given indices.
-        
-        Args:
-            indices: Indices of embeddings to retrieve [batch_size]
-            
-        Returns:
-            Poincaré ball embeddings [batch_size, embedding_dim]
-        """
-        emb = self.embeddings[indices]
-        return self._project_to_ball(emb)
-    
-    def _project_to_ball(self, x: torch.Tensor) -> torch.Tensor:
-        """Project points to the Poincaré ball (ensure ||x|| < 1)."""
-        norm = torch.norm(x, p=2, dim=-1, keepdim=True)
-        max_norm = self.max_norm
-        
-        # Clip norms that are too large
-        cond = norm > max_norm
-        x = torch.where(cond, x * max_norm / norm, x)
-        
-        return x
-    
-    def get_all_embeddings(self) -> torch.Tensor:
-        """Get all embeddings projected to the ball."""
-        return self._project_to_ball(self.embeddings)
-
-
-class MobiusAddition(nn.Module):
-    """Möbius addition in the Poincaré ball."""
-    
-    def __init__(self, curvature: float = 1.0):
-        super().__init__()
-        self.curvature = curvature
-    
-    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        """
-        Compute Möbius addition x ⊕ y.
-        
-        Args:
-            x: First point [*, dim]
-            y: Second point [*, dim]
-            
-        Returns:
-            Möbius sum [*, dim]
-        """
-        c = self.curvature
-        
-        x_sq = torch.sum(x * x, dim=-1, keepdim=True)
-        y_sq = torch.sum(y * y, dim=-1, keepdim=True)
-        xy = torch.sum(x * y, dim=-1, keepdim=True)
-        
-        num = (1 + 2 * c * xy + c * y_sq) * x + (1 - c * x_sq) * y
-        denom = 1 + 2 * c * xy + c * c * x_sq * y_sq
-        
-        return num / (denom + 1e-8)
-
-
-class ExponentialMap(nn.Module):
-    """Exponential map from tangent space to Poincaré ball."""
-    
-    def __init__(self, curvature: float = 1.0):
-        super().__init__()
-        self.curvature = curvature
-    
-    def forward(
-        self,
-        v: torch.Tensor,
-        x: torch.Tensor | None = None,
-    ) -> torch.Tensor:
-        """
-        Map tangent vector v at point x to the manifold.
-        
-        Args:
-            v: Tangent vector [*, dim]
-            x: Base point (default: origin) [*, dim]
-            
-        Returns:
-            Point on manifold [*, dim]
-        """
-        if x is None:
-            # Exponential map at origin
-            return self._exp_map_zero(v)
+        # Curvature parameter
+        if learnable_curvature:
+            self.curvature = nn.Parameter(torch.tensor(curvature))
         else:
-            # Exponential map at x
-            return self._exp_map(v, x)
+            self.register_buffer("curvature", torch.tensor(curvature))
+        
+        # Optional projection layer if dimensions differ
+        if self.input_dim != self.output_dim:
+            self.projection = nn.Linear(input_dim, self.output_dim, bias=False)
+        else:
+            self.projection = None
     
-    def _exp_map_zero(self, v: torch.Tensor) -> torch.Tensor:
-        """Exponential map at origin."""
-        c = self.curvature
-        v_norm = torch.norm(v, p=2, dim=-1, keepdim=True)
-        
-        # tanh(sqrt(c) * ||v||) / (sqrt(c) * ||v||) * v
-        sqrt_c = c ** 0.5
-        coef = torch.tanh(sqrt_c * v_norm) / (sqrt_c * v_norm + 1e-8)
-        
-        return coef * v
-    
-    def _exp_map(self, v: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
-        """Exponential map at point x."""
-        c = self.curvature
-        
-        # Conformal factor
-        x_sq = torch.sum(x * x, dim=-1, keepdim=True)
-        lambda_x = 2 / (1 - c * x_sq + 1e-8)
-        
-        v_norm = torch.norm(v, p=2, dim=-1, keepdim=True)
-        sqrt_c = c ** 0.5
-        
-        # Compute direction and magnitude
-        direction = v / (v_norm + 1e-8)
-        magnitude = torch.tanh(sqrt_c * lambda_x * v_norm / 2) / sqrt_c
-        
-        # Apply Möbius addition
-        mobius = MobiusAddition(c)
-        return mobius(x, magnitude * direction)
-
-
-class LogarithmicMap(nn.Module):
-    """Logarithmic map from Poincaré ball to tangent space."""
-    
-    def __init__(self, curvature: float = 1.0):
-        super().__init__()
-        self.curvature = curvature
-    
-    def forward(
-        self,
-        y: torch.Tensor,
-        x: torch.Tensor | None = None,
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Map point y to tangent space at x.
+        Project Euclidean embeddings to Poincaré ball.
         
         Args:
-            y: Point on manifold [*, dim]
-            x: Base point (default: origin) [*, dim]
+            x: Euclidean embeddings [batch_size, input_dim]
             
         Returns:
-            Tangent vector [*, dim]
+            Hyperbolic embeddings [batch_size, output_dim]
         """
-        if x is None:
-            return self._log_map_zero(y)
-        else:
-            return self._log_map(y, x)
-    
-    def _log_map_zero(self, y: torch.Tensor) -> torch.Tensor:
-        """Logarithmic map at origin."""
-        c = self.curvature
-        y_norm = torch.norm(y, p=2, dim=-1, keepdim=True)
-        sqrt_c = c ** 0.5
+        # Optional linear projection
+        if self.projection is not None:
+            x = self.projection(x)
         
-        # arctanh(sqrt(c) * ||y||) / (sqrt(c) * ||y||) * y
-        coef = torch.arctanh(sqrt_c * y_norm.clamp(max=1 - 1e-5))
-        coef = coef / (sqrt_c * y_norm + 1e-8)
+        # Project to Poincaré ball using exponential map at origin
+        # First normalize to tangent space
+        x_tangent = x / (1 + torch.norm(x, dim=-1, keepdim=True))
         
-        return coef * y
-    
-    def _log_map(self, y: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
-        """Logarithmic map at point x."""
-        c = self.curvature
-        
-        # Compute -x ⊕ y
-        mobius = MobiusAddition(c)
-        neg_x = -x
-        diff = mobius(neg_x, y)
-        
-        # Conformal factor
-        x_sq = torch.sum(x * x, dim=-1, keepdim=True)
-        lambda_x = 2 / (1 - c * x_sq + 1e-8)
-        
-        diff_norm = torch.norm(diff, p=2, dim=-1, keepdim=True)
-        sqrt_c = c ** 0.5
-        
-        coef = 2 / (sqrt_c * lambda_x) * torch.arctanh(
-            sqrt_c * diff_norm.clamp(max=1 - 1e-5)
+        # Apply exponential map
+        x_hyp = exponential_map(
+            x_tangent,
+            base_point=None,  # Map from origin
+            curvature=self.curvature.item() if isinstance(self.curvature, torch.Tensor) else self.curvature,
         )
         
-        return coef * diff / (diff_norm + 1e-8)
+        # Ensure we stay inside the ball
+        x_hyp = project_to_poincare(x_hyp, max_norm=self.max_norm)
+        
+        return x_hyp
+    
+    def distance(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """
+        Compute pairwise Poincaré distances.
+        
+        Args:
+            x: First set of points [batch_size, dim]
+            y: Second set of points [batch_size, dim]
+            
+        Returns:
+            Distances [batch_size]
+        """
+        from peptide_atlas.models.hyperbolic.distance import poincare_distance
+        curv = self.curvature.item() if isinstance(self.curvature, torch.Tensor) else self.curvature
+        return poincare_distance(x, y, curvature=curv)
+    
+    def centroid(self, x: torch.Tensor, weights: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """
+        Compute the Einstein midpoint (hyperbolic centroid).
+        
+        Args:
+            x: Points in the Poincaré ball [n_points, dim]
+            weights: Optional weights for each point [n_points]
+            
+        Returns:
+            Centroid [dim]
+        """
+        if weights is None:
+            weights = torch.ones(x.shape[0], device=x.device)
+        
+        weights = weights / weights.sum()
+        
+        curv = self.curvature.item() if isinstance(self.curvature, torch.Tensor) else self.curvature
+        
+        # Einstein midpoint formula
+        gamma = 1 / torch.sqrt(1 - curv * torch.sum(x * x, dim=-1) + 1e-8)  # Lorentz factors
+        
+        weighted_sum = (weights * gamma).unsqueeze(-1) * x
+        weighted_sum = weighted_sum.sum(dim=0)
+        
+        gamma_sum = (weights * gamma).sum()
+        
+        centroid = weighted_sum / (gamma_sum + 1e-8)
+        
+        # Project back to ball
+        return project_to_poincare(centroid.unsqueeze(0), self.max_norm).squeeze(0)
 
+
+class HyperbolicMLR(nn.Module):
+    """
+    Multinomial Logistic Regression in hyperbolic space.
+    
+    Useful for classification tasks on hyperbolic embeddings.
+    """
+    
+    def __init__(
+        self,
+        input_dim: int,
+        num_classes: int,
+        curvature: float = 1.0,
+    ):
+        """
+        Initialize hyperbolic MLR.
+        
+        Args:
+            input_dim: Dimension of hyperbolic embeddings
+            num_classes: Number of output classes
+            curvature: Curvature of hyperbolic space
+        """
+        super().__init__()
+        
+        self.input_dim = input_dim
+        self.num_classes = num_classes
+        self.curvature = curvature
+        
+        # Class representatives (points on the ball)
+        self.p = nn.Parameter(torch.zeros(num_classes, input_dim))
+        
+        # Hyperplane normals in tangent space
+        self.a = nn.Parameter(torch.randn(num_classes, input_dim) * 0.01)
+        
+        self._init_parameters()
+    
+    def _init_parameters(self):
+        """Initialize parameters with small values inside the ball."""
+        nn.init.uniform_(self.p, -0.001, 0.001)
+        nn.init.xavier_uniform_(self.a)
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Compute class logits for hyperbolic embeddings.
+        
+        Args:
+            x: Hyperbolic embeddings [batch_size, input_dim]
+            
+        Returns:
+            Logits [batch_size, num_classes]
+        """
+        from peptide_atlas.models.hyperbolic.distance import hyperbolic_mlr
+        
+        # Ensure p is inside the ball
+        p = project_to_poincare(self.p, max_norm=0.95)
+        
+        return hyperbolic_mlr(x, p, self.a, curvature=self.curvature)
+
+
+class EuclideanToPoincareProjection(nn.Module):
+    """
+    Simple projection from Euclidean to Poincaré space.
+    
+    Wraps the projection operation for use in pipelines.
+    """
+    
+    def __init__(self, max_norm: float = 0.99):
+        super().__init__()
+        self.max_norm = max_norm
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Project to Poincaré ball."""
+        return project_to_poincare(x, self.max_norm)

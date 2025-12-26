@@ -1,8 +1,8 @@
 """
-Filter functions for the Mapper algorithm.
+Filter functions for Mapper algorithm.
 
-Filter functions (also called lenses) project data to lower dimensions
-for the Mapper cover construction.
+These functions project high-dimensional embeddings to lower dimensions
+for use as the "lens" in the Mapper algorithm.
 
 REMINDER: This project is for research and education only.
 """
@@ -15,223 +15,227 @@ import numpy as np
 from loguru import logger
 
 
-def get_filter_function(
-    name: str,
-    **kwargs,
-) -> Callable[[np.ndarray], np.ndarray]:
-    """
-    Get a filter function by name.
-    
-    Args:
-        name: Name of filter function
-        **kwargs: Additional arguments for the filter
-        
-    Returns:
-        Callable that maps data to filter values
-    """
-    filters = {
-        "umap": umap_filter,
-        "pca": pca_filter,
-        "density": density_filter,
-        "eccentricity": eccentricity_filter,
-        "l2_norm": l2_norm_filter,
-        "evidence_tier": evidence_tier_filter,
-    }
-    
-    if name not in filters:
-        raise ValueError(f"Unknown filter: {name}. Available: {list(filters.keys())}")
-    
-    def wrapped(X: np.ndarray) -> np.ndarray:
-        return filters[name](X, **kwargs)
-    
-    return wrapped
-
-
-def umap_filter(
-    X: np.ndarray,
-    n_neighbors: int = 15,
-    min_dist: float = 0.1,
-    n_components: int = 2,
-    metric: str = "cosine",
-    random_state: int = 42,
-) -> np.ndarray:
-    """
-    UMAP-based filter function.
-    
-    Projects data using UMAP for a topology-preserving lens.
-    """
-    try:
-        import umap
-        
-        reducer = umap.UMAP(
-            n_neighbors=n_neighbors,
-            min_dist=min_dist,
-            n_components=n_components,
-            metric=metric,
-            random_state=random_state,
-        )
-        return reducer.fit_transform(X)
-    except ImportError:
-        logger.warning("UMAP not available, falling back to PCA")
-        return pca_filter(X, n_components=n_components)
-
-
 def pca_filter(
     X: np.ndarray,
     n_components: int = 2,
 ) -> np.ndarray:
     """
-    PCA-based filter function.
+    PCA projection as filter function.
     
-    Projects to principal components.
+    Args:
+        X: Data matrix [n_samples, n_features]
+        n_components: Number of components to project to
+        
+    Returns:
+        Projected data [n_samples, n_components]
     """
     from sklearn.decomposition import PCA
     
     pca = PCA(n_components=n_components)
-    return pca.fit_transform(X)
+    result = pca.fit_transform(X)
+    
+    logger.debug(f"PCA filter: explained variance = {pca.explained_variance_ratio_.sum():.3f}")
+    
+    return result
+
+
+def umap_filter(
+    X: np.ndarray,
+    n_components: int = 2,
+    n_neighbors: int = 15,
+    min_dist: float = 0.1,
+    metric: str = "cosine",
+    random_state: int = 42,
+) -> np.ndarray:
+    """
+    UMAP projection as filter function.
+    
+    Args:
+        X: Data matrix [n_samples, n_features]
+        n_components: Number of dimensions
+        n_neighbors: UMAP n_neighbors parameter
+        min_dist: UMAP min_dist parameter
+        metric: Distance metric
+        random_state: Random seed
+        
+    Returns:
+        Projected data [n_samples, n_components]
+    """
+    try:
+        import umap
+    except ImportError:
+        raise ImportError("umap-learn required: pip install umap-learn")
+    
+    reducer = umap.UMAP(
+        n_components=n_components,
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        metric=metric,
+        random_state=random_state,
+    )
+    
+    return reducer.fit_transform(X)
 
 
 def density_filter(
     X: np.ndarray,
-    n_neighbors: int = 15,
+    n_neighbors: int = 5,
 ) -> np.ndarray:
     """
-    Density-based filter function.
+    Local density as filter function.
     
-    Estimates local density using k-nearest neighbors.
+    Computes density as inverse of mean distance to k nearest neighbors.
+    
+    Args:
+        X: Data matrix [n_samples, n_features]
+        n_neighbors: Number of neighbors for density estimation
+        
+    Returns:
+        Density values [n_samples, 1]
     """
     from sklearn.neighbors import NearestNeighbors
     
-    nn = NearestNeighbors(n_neighbors=n_neighbors)
+    nn = NearestNeighbors(n_neighbors=n_neighbors + 1)  # +1 to exclude self
     nn.fit(X)
     distances, _ = nn.kneighbors(X)
     
-    # Density estimate: inverse of average distance to k neighbors
-    avg_dist = distances.mean(axis=1)
-    density = 1.0 / (avg_dist + 1e-8)
+    # Density = inverse of mean distance (exclude self-distance at index 0)
+    mean_dist = distances[:, 1:].mean(axis=1)
+    density = 1.0 / (mean_dist + 1e-8)
     
     return density.reshape(-1, 1)
 
 
 def eccentricity_filter(
     X: np.ndarray,
-    p: float = 2.0,
+    metric: str = "euclidean",
 ) -> np.ndarray:
     """
-    Eccentricity-based filter function.
+    Eccentricity (max distance to any other point) as filter.
     
-    Measures how far each point is from the center of the data.
+    Points at the "edge" of the distribution have high eccentricity.
+    
+    Args:
+        X: Data matrix [n_samples, n_features]
+        metric: Distance metric
+        
+    Returns:
+        Eccentricity values [n_samples, 1]
     """
-    # Compute distances to mean
-    center = X.mean(axis=0)
-    eccentricity = np.linalg.norm(X - center, ord=p, axis=1)
+    from scipy.spatial.distance import cdist
+    
+    dists = cdist(X, X, metric=metric)
+    eccentricity = dists.max(axis=1)
     
     return eccentricity.reshape(-1, 1)
 
 
-def l2_norm_filter(
-    X: np.ndarray,
-) -> np.ndarray:
+def l2norm_filter(X: np.ndarray) -> np.ndarray:
     """
-    L2 norm filter function.
+    L2 norm of each point as filter.
     
-    Simple filter based on vector magnitude.
+    Args:
+        X: Data matrix [n_samples, n_features]
+        
+    Returns:
+        L2 norms [n_samples, 1]
     """
     norms = np.linalg.norm(X, axis=1)
     return norms.reshape(-1, 1)
 
 
 def evidence_tier_filter(
-    X: np.ndarray,
-    evidence_tiers: Optional[np.ndarray] = None,
+    evidence_tiers: np.ndarray,
 ) -> np.ndarray:
     """
-    Evidence tier-based filter function.
+    Evidence tier as filter function.
     
-    Uses evidence quality as a filter dimension.
-    Combines with PCA for 2D lens.
+    Maps evidence tier to numerical value for filtering.
+    Lower tiers (better evidence) get lower values.
     
     Args:
-        X: Data matrix
-        evidence_tiers: Evidence tier values (0-6 scale)
+        evidence_tiers: Array of evidence tier indices
+        
+    Returns:
+        Filter values [n_samples, 1]
     """
-    # PCA component
-    from sklearn.decomposition import PCA
-    pca = PCA(n_components=1)
-    pca_vals = pca.fit_transform(X)
+    # Normalize to [0, 1] range
+    min_tier = evidence_tiers.min()
+    max_tier = evidence_tiers.max()
     
-    if evidence_tiers is not None:
-        # Normalize evidence tiers
-        tier_normalized = evidence_tiers.reshape(-1, 1) / 6.0
-        return np.hstack([pca_vals, tier_normalized])
-    else:
-        # Second PCA component
-        pca2 = PCA(n_components=2)
-        return pca2.fit_transform(X)
+    if max_tier == min_tier:
+        return np.zeros((len(evidence_tiers), 1))
+    
+    normalized = (evidence_tiers - min_tier) / (max_tier - min_tier)
+    return normalized.reshape(-1, 1)
 
 
-def composite_filter(
+def combined_filter(
     X: np.ndarray,
-    filter_names: list[str],
+    filters: list[str],
     weights: Optional[list[float]] = None,
     **kwargs,
 ) -> np.ndarray:
     """
-    Composite filter combining multiple filter functions.
+    Combine multiple filter functions.
     
     Args:
         X: Data matrix
-        filter_names: List of filter function names
+        filters: List of filter names to combine
         weights: Optional weights for each filter
-        **kwargs: Arguments passed to individual filters
-    """
-    if weights is None:
-        weights = [1.0] * len(filter_names)
-    
-    components = []
-    for name in filter_names:
-        filter_fn = get_filter_function(name)
-        component = filter_fn(X, **kwargs.get(name, {}))
-        
-        # Normalize each component
-        component = (component - component.mean(axis=0)) / (component.std(axis=0) + 1e-8)
-        components.append(component)
-    
-    # Combine with weights
-    combined = np.zeros_like(components[0])
-    for comp, w in zip(components, weights):
-        combined += w * comp
-    
-    return combined
-
-
-def create_lens_from_peptide_data(
-    embeddings: np.ndarray,
-    peptide_classes: Optional[np.ndarray] = None,
-    evidence_tiers: Optional[np.ndarray] = None,
-    method: str = "umap",
-) -> np.ndarray:
-    """
-    Create a lens function specialized for peptide data.
-    
-    Args:
-        embeddings: Peptide embeddings
-        peptide_classes: Categorical class labels
-        evidence_tiers: Evidence tier values
-        method: Base method for lens
+        **kwargs: Additional arguments for individual filters
         
     Returns:
-        2D lens values
+        Combined filter values [n_samples, n_filters]
     """
-    if method == "umap":
-        lens = umap_filter(embeddings)
-    elif method == "pca":
-        lens = pca_filter(embeddings)
-    else:
-        lens = umap_filter(embeddings)
+    if weights is None:
+        weights = [1.0] * len(filters)
     
-    # Optionally incorporate evidence as color but not filter
-    # (Filter should be based on geometry, not labels)
+    results = []
     
-    return lens
+    for filter_name, weight in zip(filters, weights):
+        filter_fn = get_filter_function(filter_name)
+        result = filter_fn(X, **kwargs.get(filter_name, {}))
+        
+        # Normalize each filter to [0, 1]
+        result_min = result.min()
+        result_max = result.max()
+        if result_max > result_min:
+            result = (result - result_min) / (result_max - result_min)
+        results.append(result * weight)
+    
+    return np.hstack(results)
 
+
+def get_filter_function(name: str) -> Callable:
+    """
+    Get filter function by name.
+    
+    Args:
+        name: Name of the filter function
+        
+    Returns:
+        Filter function callable
+        
+    Raises:
+        ValueError: If filter name is unknown
+    """
+    filters = {
+        "pca": pca_filter,
+        "umap": umap_filter,
+        "density": density_filter,
+        "eccentricity": eccentricity_filter,
+        "l2norm": l2norm_filter,
+        "evidence_tier": evidence_tier_filter,
+    }
+    
+    if name not in filters:
+        available = ", ".join(filters.keys())
+        raise ValueError(f"Unknown filter: {name}. Available: {available}")
+    
+    return filters[name]
+
+
+def list_available_filters() -> list[str]:
+    """Return list of available filter function names."""
+    return ["pca", "umap", "density", "eccentricity", "l2norm", "evidence_tier"]

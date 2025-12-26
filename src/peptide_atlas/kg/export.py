@@ -1,323 +1,345 @@
 """
-Knowledge Graph export utilities.
+Knowledge graph export utilities.
 
-Supports export to various formats for analysis and visualization.
+Converts the internal KnowledgeGraph format to formats suitable for
+PyTorch Geometric, NetworkX, and other graph libraries.
 
 REMINDER: This project is for research and education only.
-No dosing, no protocols, no therapeutic recommendations.
 """
 
 from __future__ import annotations
 
-import csv
-import json
-from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
-import networkx as nx
+import numpy as np
 from loguru import logger
 
 from peptide_atlas.data.schemas import KnowledgeGraph
-from peptide_atlas.kg.builder import KnowledgeGraphBuilder
-
-
-def export_to_json(kg: KnowledgeGraph, path: Path) -> None:
-    """Export knowledge graph to JSON format."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(path, "w") as f:
-        json.dump(kg.model_dump(mode="json"), f, indent=2, default=str)
-    
-    logger.info(f"Exported knowledge graph to JSON: {path}")
-
-
-def export_to_networkx(kg: KnowledgeGraph) -> nx.MultiDiGraph:
-    """Export knowledge graph to NetworkX format."""
-    builder = KnowledgeGraphBuilder()
-    builder.kg = kg
-    return builder.to_networkx()
-
-
-def export_to_gexf(kg: KnowledgeGraph, path: Path) -> None:
-    """Export knowledge graph to GEXF format for Gephi."""
-    G = export_to_networkx(kg)
-    
-    path.parent.mkdir(parents=True, exist_ok=True)
-    nx.write_gexf(G, str(path))
-    
-    logger.info(f"Exported knowledge graph to GEXF: {path}")
-
-
-def export_to_graphml(kg: KnowledgeGraph, path: Path) -> None:
-    """Export knowledge graph to GraphML format."""
-    G = export_to_networkx(kg)
-    
-    path.parent.mkdir(parents=True, exist_ok=True)
-    nx.write_graphml(G, str(path))
-    
-    logger.info(f"Exported knowledge graph to GraphML: {path}")
-
-
-def export_nodes_to_csv(kg: KnowledgeGraph, output_dir: Path) -> None:
-    """Export all nodes to CSV files."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Peptides
-    peptide_path = output_dir / "peptides.csv"
-    with open(peptide_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            "id", "canonical_name", "synonyms", "peptide_class", 
-            "subclass", "regulatory_status", "evidence_tier", "description"
-        ])
-        for p in kg.peptides:
-            writer.writerow([
-                str(p.id),
-                p.canonical_name,
-                "|".join(p.synonyms),
-                p.peptide_class.value,
-                p.subclass or "",
-                p.regulatory_status.value,
-                p.evidence_tier.value,
-                p.description or "",
-            ])
-    
-    # Targets
-    target_path = output_dir / "targets.csv"
-    with open(target_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["id", "name", "target_type", "description"])
-        for t in kg.targets:
-            writer.writerow([
-                str(t.id),
-                t.name,
-                t.target_type.value,
-                t.description or "",
-            ])
-    
-    # Pathways
-    pathway_path = output_dir / "pathways.csv"
-    with open(pathway_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["id", "name", "category", "description"])
-        for p in kg.pathways:
-            writer.writerow([
-                str(p.id),
-                p.name,
-                p.category.value,
-                p.description or "",
-            ])
-    
-    # Effect domains
-    effect_path = output_dir / "effect_domains.csv"
-    with open(effect_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["id", "name", "category", "description"])
-        for e in kg.effect_domains:
-            writer.writerow([
-                str(e.id),
-                e.name,
-                e.category.value,
-                e.description or "",
-            ])
-    
-    # Risks
-    risk_path = output_dir / "risks.csv"
-    with open(risk_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["id", "name", "category", "severity", "description"])
-        for r in kg.risks:
-            writer.writerow([
-                str(r.id),
-                r.name,
-                r.category.value,
-                r.severity_typical.value,
-                r.description or "",
-            ])
-    
-    logger.info(f"Exported nodes to CSV files in: {output_dir}")
-
-
-def export_edges_to_csv(kg: KnowledgeGraph, output_dir: Path) -> None:
-    """Export all edges to CSV files."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Binds edges
-    binds_path = output_dir / "binds_edges.csv"
-    with open(binds_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["source_id", "target_id", "binding_type", "confidence"])
-        for e in kg.binds_edges:
-            writer.writerow([
-                str(e.source_id),
-                str(e.target_id),
-                e.binding_type.value,
-                e.confidence.value,
-            ])
-    
-    # Modulates edges
-    modulates_path = output_dir / "modulates_edges.csv"
-    with open(modulates_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["source_id", "target_id", "direction", "magnitude", "confidence"])
-        for e in kg.modulates_edges:
-            writer.writerow([
-                str(e.source_id),
-                str(e.target_id),
-                e.direction,
-                e.magnitude or "",
-                e.confidence.value,
-            ])
-    
-    # Effect edges
-    effect_path = output_dir / "effect_edges.csv"
-    with open(effect_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            "source_id", "target_id", "direction", "evidence_tier", "confidence"
-        ])
-        for e in kg.effect_edges:
-            writer.writerow([
-                str(e.source_id),
-                str(e.target_id),
-                e.direction.value,
-                e.evidence_tier.value,
-                e.confidence.value,
-            ])
-    
-    # Risk edges
-    risk_path = output_dir / "risk_edges.csv"
-    with open(risk_path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            "source_id", "target_id", "frequency", "evidence_tier", "confidence"
-        ])
-        for e in kg.risk_edges:
-            writer.writerow([
-                str(e.source_id),
-                str(e.target_id),
-                e.frequency or "",
-                e.evidence_tier.value,
-                e.confidence.value,
-            ])
-    
-    logger.info(f"Exported edges to CSV files in: {output_dir}")
 
 
 def export_for_pytorch_geometric(kg: KnowledgeGraph) -> dict[str, Any]:
     """
-    Export knowledge graph in format suitable for PyTorch Geometric.
+    Convert KnowledgeGraph to PyTorch Geometric format.
     
-    Returns dictionary with node features, edge indices, and edge types.
+    Args:
+        kg: KnowledgeGraph instance
+        
+    Returns:
+        Dictionary containing:
+            - node_types: list[str] - Type of each node
+            - node_ids: list[str] - UUID of each node
+            - node_names: list[str] - Human-readable name
+            - edge_index: list[list[int]] - [2, num_edges] source/target indices
+            - edge_types: list[str] - Type of each edge
+            - peptide_mask: list[bool] - True for peptide nodes
+            - num_nodes: int - Total node count
+            - num_edges: int - Total edge count
     """
-    # Create node type mappings
+    logger.info("Exporting knowledge graph for PyTorch Geometric")
+    
+    # Build node index mapping
     node_id_to_idx: dict[str, int] = {}
     node_types: list[str] = []
-    node_features: list[dict] = []
+    node_ids: list[str] = []
+    node_names: list[str] = []
+    peptide_mask: list[bool] = []
     
     idx = 0
     
-    # Add peptides
-    for p in kg.peptides:
-        node_id_to_idx[str(p.id)] = idx
+    # Add peptide nodes first (important for masking)
+    for peptide in kg.peptides:
+        node_id_to_idx[str(peptide.id)] = idx
         node_types.append("peptide")
-        node_features.append({
-            "name": p.canonical_name,
-            "peptide_class": p.peptide_class.value,
-            "evidence_tier": p.evidence_tier.value,
-        })
+        node_ids.append(str(peptide.id))
+        node_names.append(peptide.canonical_name)
+        peptide_mask.append(True)
         idx += 1
     
-    # Add targets
-    for t in kg.targets:
-        node_id_to_idx[str(t.id)] = idx
+    # Add target nodes
+    for target in kg.targets:
+        node_id_to_idx[str(target.id)] = idx
         node_types.append("target")
-        node_features.append({
-            "name": t.name,
-            "target_type": t.target_type.value,
-        })
+        node_ids.append(str(target.id))
+        node_names.append(target.name)
+        peptide_mask.append(False)
         idx += 1
     
-    # Add pathways
-    for p in kg.pathways:
-        node_id_to_idx[str(p.id)] = idx
+    # Add pathway nodes
+    for pathway in kg.pathways:
+        node_id_to_idx[str(pathway.id)] = idx
         node_types.append("pathway")
-        node_features.append({
-            "name": p.name,
-            "category": p.category.value,
-        })
+        node_ids.append(str(pathway.id))
+        node_names.append(pathway.name)
+        peptide_mask.append(False)
         idx += 1
     
-    # Add effect domains
-    for e in kg.effect_domains:
-        node_id_to_idx[str(e.id)] = idx
+    # Add effect domain nodes
+    for effect in kg.effect_domains:
+        node_id_to_idx[str(effect.id)] = idx
         node_types.append("effect_domain")
-        node_features.append({
-            "name": e.name,
-            "category": e.category.value,
-        })
+        node_ids.append(str(effect.id))
+        node_names.append(effect.name)
+        peptide_mask.append(False)
         idx += 1
     
-    # Add risks
-    for r in kg.risks:
-        node_id_to_idx[str(r.id)] = idx
+    # Add risk nodes
+    for risk in kg.risks:
+        node_id_to_idx[str(risk.id)] = idx
         node_types.append("risk")
-        node_features.append({
-            "name": r.name,
-            "category": r.category.value,
-            "severity": r.severity_typical.value,
-        })
+        node_ids.append(str(risk.id))
+        node_names.append(risk.name)
+        peptide_mask.append(False)
         idx += 1
     
-    # Build edge indices
-    edge_index: list[list[int]] = [[], []]  # [sources, targets]
+    # Build edge lists
+    edge_sources: list[int] = []
+    edge_targets: list[int] = []
     edge_types: list[str] = []
-    edge_attrs: list[dict] = []
     
-    for e in kg.binds_edges:
-        src = node_id_to_idx.get(str(e.source_id))
-        tgt = node_id_to_idx.get(str(e.target_id))
-        if src is not None and tgt is not None:
-            edge_index[0].append(src)
-            edge_index[1].append(tgt)
+    # BINDS edges
+    for edge in kg.binds_edges:
+        src = node_id_to_idx.get(str(edge.source_id))
+        dst = node_id_to_idx.get(str(edge.target_id))
+        if src is not None and dst is not None:
+            edge_sources.append(src)
+            edge_targets.append(dst)
             edge_types.append("binds")
-            edge_attrs.append({"binding_type": e.binding_type.value})
+            # Add reverse edge for message passing
+            edge_sources.append(dst)
+            edge_targets.append(src)
+            edge_types.append("binds_rev")
     
-    for e in kg.modulates_edges:
-        src = node_id_to_idx.get(str(e.source_id))
-        tgt = node_id_to_idx.get(str(e.target_id))
-        if src is not None and tgt is not None:
-            edge_index[0].append(src)
-            edge_index[1].append(tgt)
+    # MODULATES edges
+    for edge in kg.modulates_edges:
+        src = node_id_to_idx.get(str(edge.source_id))
+        dst = node_id_to_idx.get(str(edge.target_id))
+        if src is not None and dst is not None:
+            edge_sources.append(src)
+            edge_targets.append(dst)
             edge_types.append("modulates")
-            edge_attrs.append({"direction": e.direction})
+            edge_sources.append(dst)
+            edge_targets.append(src)
+            edge_types.append("modulates_rev")
     
-    for e in kg.effect_edges:
-        src = node_id_to_idx.get(str(e.source_id))
-        tgt = node_id_to_idx.get(str(e.target_id))
-        if src is not None and tgt is not None:
-            edge_index[0].append(src)
-            edge_index[1].append(tgt)
+    # ASSOCIATED_WITH_EFFECT edges
+    for edge in kg.effect_edges:
+        src = node_id_to_idx.get(str(edge.source_id))
+        dst = node_id_to_idx.get(str(edge.target_id))
+        if src is not None and dst is not None:
+            edge_sources.append(src)
+            edge_targets.append(dst)
             edge_types.append("associated_with_effect")
-            edge_attrs.append({"evidence_tier": e.evidence_tier.value})
+            edge_sources.append(dst)
+            edge_targets.append(src)
+            edge_types.append("associated_with_effect_rev")
     
-    for e in kg.risk_edges:
-        src = node_id_to_idx.get(str(e.source_id))
-        tgt = node_id_to_idx.get(str(e.target_id))
-        if src is not None and tgt is not None:
-            edge_index[0].append(src)
-            edge_index[1].append(tgt)
+    # ASSOCIATED_WITH_RISK edges
+    for edge in kg.risk_edges:
+        src = node_id_to_idx.get(str(edge.source_id))
+        dst = node_id_to_idx.get(str(edge.target_id))
+        if src is not None and dst is not None:
+            edge_sources.append(src)
+            edge_targets.append(dst)
             edge_types.append("associated_with_risk")
-            edge_attrs.append({"evidence_tier": e.evidence_tier.value})
+            edge_sources.append(dst)
+            edge_targets.append(src)
+            edge_types.append("associated_with_risk_rev")
+    
+    logger.info(f"Exported: {len(node_ids)} nodes, {len(edge_sources)} edges")
     
     return {
-        "num_nodes": len(node_types),
-        "num_edges": len(edge_types),
-        "node_id_to_idx": node_id_to_idx,
         "node_types": node_types,
-        "node_features": node_features,
-        "edge_index": edge_index,
+        "node_ids": node_ids,
+        "node_names": node_names,
+        "edge_index": [edge_sources, edge_targets],
         "edge_types": edge_types,
-        "edge_attrs": edge_attrs,
+        "peptide_mask": peptide_mask,
+        "num_nodes": len(node_ids),
+        "num_edges": len(edge_sources),
     }
 
+
+def get_node_type_mapping(graph_data: dict[str, Any]) -> dict[str, int]:
+    """
+    Get mapping from node type string to integer index.
+    
+    Args:
+        graph_data: Output from export_for_pytorch_geometric
+        
+    Returns:
+        Dictionary mapping type name to integer
+    """
+    unique_types = sorted(set(graph_data["node_types"]))
+    return {t: i for i, t in enumerate(unique_types)}
+
+
+def get_edge_type_mapping(graph_data: dict[str, Any]) -> dict[str, int]:
+    """
+    Get mapping from edge type string to integer index.
+    
+    Args:
+        graph_data: Output from export_for_pytorch_geometric
+        
+    Returns:
+        Dictionary mapping type name to integer
+    """
+    unique_types = sorted(set(graph_data["edge_types"]))
+    return {t: i for i, t in enumerate(unique_types)}
+
+
+def to_torch_tensors(graph_data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Convert graph data to PyTorch tensors.
+    
+    Args:
+        graph_data: Output from export_for_pytorch_geometric
+        
+    Returns:
+        Dictionary with torch tensors
+    """
+    import torch
+    
+    node_type_map = get_node_type_mapping(graph_data)
+    edge_type_map = get_edge_type_mapping(graph_data)
+    
+    node_types = torch.tensor(
+        [node_type_map[t] for t in graph_data["node_types"]],
+        dtype=torch.long
+    )
+    
+    edge_index = torch.tensor(
+        graph_data["edge_index"],
+        dtype=torch.long
+    )
+    
+    edge_types = torch.tensor(
+        [edge_type_map[t] for t in graph_data["edge_types"]],
+        dtype=torch.long
+    )
+    
+    peptide_mask = torch.tensor(
+        graph_data["peptide_mask"],
+        dtype=torch.bool
+    )
+    
+    return {
+        "node_types": node_types,
+        "edge_index": edge_index,
+        "edge_types": edge_types,
+        "peptide_mask": peptide_mask,
+        "num_node_types": len(node_type_map),
+        "num_edge_types": len(edge_type_map),
+        "node_type_map": node_type_map,
+        "edge_type_map": edge_type_map,
+    }
+
+
+def export_peptide_features(kg: KnowledgeGraph) -> dict[str, np.ndarray]:
+    """
+    Extract peptide features for node initialization.
+    
+    Args:
+        kg: KnowledgeGraph instance
+        
+    Returns:
+        Dictionary with feature arrays
+    """
+    from peptide_atlas.constants import PeptideClass, EvidenceTier, RegulatoryStatus
+    
+    # Get enum mappings
+    class_map = {c: i for i, c in enumerate(PeptideClass)}
+    tier_map = {t: i for i, t in enumerate(EvidenceTier)}
+    status_map = {s: i for i, s in enumerate(RegulatoryStatus)}
+    
+    peptide_classes = []
+    evidence_tiers = []
+    regulatory_statuses = []
+    
+    for peptide in kg.peptides:
+        peptide_classes.append(class_map[peptide.peptide_class])
+        evidence_tiers.append(tier_map[peptide.evidence_tier])
+        regulatory_statuses.append(status_map[peptide.regulatory_status])
+    
+    return {
+        "peptide_class": np.array(peptide_classes),
+        "evidence_tier": np.array(evidence_tiers),
+        "regulatory_status": np.array(regulatory_statuses),
+        "num_classes": len(class_map),
+        "num_tiers": len(tier_map),
+        "num_statuses": len(status_map),
+    }
+
+
+def export_to_networkx(kg: KnowledgeGraph) -> "nx.MultiDiGraph":
+    """
+    Export KnowledgeGraph to NetworkX format.
+    
+    Args:
+        kg: KnowledgeGraph instance
+        
+    Returns:
+        NetworkX MultiDiGraph
+    """
+    import networkx as nx
+    
+    G = nx.MultiDiGraph()
+    
+    # Add peptide nodes
+    for p in kg.peptides:
+        G.add_node(
+            str(p.id),
+            name=p.canonical_name,
+            node_type="peptide",
+            peptide_class=p.peptide_class.value,
+            evidence_tier=p.evidence_tier.value,
+        )
+    
+    # Add target nodes
+    for t in kg.targets:
+        G.add_node(
+            str(t.id),
+            name=t.name,
+            node_type="target",
+            target_type=t.target_type.value,
+        )
+    
+    # Add pathway nodes
+    for p in kg.pathways:
+        G.add_node(
+            str(p.id),
+            name=p.name,
+            node_type="pathway",
+            category=p.category.value,
+        )
+    
+    # Add effect domain nodes
+    for e in kg.effect_domains:
+        G.add_node(
+            str(e.id),
+            name=e.name,
+            node_type="effect_domain",
+        )
+    
+    # Add risk nodes
+    for r in kg.risks:
+        G.add_node(
+            str(r.id),
+            name=r.name,
+            node_type="risk",
+            severity=r.severity.value,
+        )
+    
+    # Add edges
+    for e in kg.binds_edges:
+        G.add_edge(str(e.source_id), str(e.target_id), edge_type="binds")
+    
+    for e in kg.modulates_edges:
+        G.add_edge(str(e.source_id), str(e.target_id), edge_type="modulates")
+    
+    for e in kg.effect_edges:
+        G.add_edge(str(e.source_id), str(e.target_id), edge_type="associated_with_effect")
+    
+    for e in kg.risk_edges:
+        G.add_edge(str(e.source_id), str(e.target_id), edge_type="associated_with_risk")
+    
+    return G
